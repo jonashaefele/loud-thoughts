@@ -14,12 +14,12 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18.x' # You might need to adjust this value to your own version
+          node-version: '20.x' # You might need to adjust this value to your own version
       # Get the version number and put it in a variable
       - name: Get package version
         id: package-version
         run: |
-          VERSION=$(jq -r '.version' manifest.json)
+          VERSION=$(jq -r '.version' plugin/manifest.json)
           echo "::set-output name=version::$VERSION"
       # Build the plugin
       - name: Run install
@@ -78,7 +78,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./manifest.json
+          asset_path: ./plugin/dist/manifest.json
           asset_name: manifest.json
           asset_content_type: application/json
       # Upload the styles.css
@@ -89,6 +89,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./plugin/styles.css
+          asset_path: ./plugin/dist/styles.css
           asset_name: styles.css
           asset_content_type: application/json
