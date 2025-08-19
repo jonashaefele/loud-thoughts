@@ -1,0 +1,14 @@
+{
+  "id": "loud-thoughts",
+  "name": "LoudThoughts",
+  "version": "1.0.0",
+  "minAppVersion": "1.6.0",
+  "description": "Sync your thoughts from AudioPen, VoiceNotes, and Alfie to Obsidian.",
+  "author": "Jonas Haefele",
+  "authorUrl": "https://loudthoughts.cloud",
+  "isDesktopOnly": false,
+  "fundingUrl": {
+    "Buy Me a Coffee": "https://ko-fi.com/jonashaefele",
+    "GitHub Sponsor": "https://github.com/sponsors/jonashaefele"
+  }
+}

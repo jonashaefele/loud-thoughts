@@ -1,0 +1,32 @@
+{
+  "name": "plugin",
+  "version": "0.0.1",
+  "description": "This plugin connects your notes to the internet of things via webhooks",
+  "main": "main.js",
+  "scripts": {
+    "build": "vite build"
+  },
+  "keywords": [],
+  "author": "",
+  "dependencies": {
+    "firebase": "^10.11.1",
+    "shared": "^0.0.1"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-replace": "^5.0.5",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@types/node": "^20.12.10",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.0",
+    "dotenv": "^16.4.5",
+    "obsidian": "1.5.7-1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "rollup": "^4.17.2",
+    "tslib": "^2.6.2",
+    "vite": "^5.2.11",
+    "vite-raw-plugin": "^1.0.2"
+  }
+}
