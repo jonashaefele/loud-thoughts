@@ -104,6 +104,37 @@ _Migration from AudioPen Obsidian Plugin completed on August 19, 2025_
    - Better error messages with actionable steps
    - Settings validation and hints
 
+### Dependency Modernization (High Priority)
+
+**Critical security and compatibility updates needed after GitHub Actions analysis:**
+
+1. **ESLint v9 Upgrade** (30-45 minutes):
+   ```bash
+   # Update ESLint across all workspaces
+   yarn add -D eslint@^9.0.0 @eslint/js@^9.0.0
+   # Update existing eslint.config.js files
+   ```
+
+2. **Add Missing Peer Dependencies** (15 minutes):
+   ```bash
+   cd web
+   yarn add -D postcss@^8.4.47 @babel/core@^7.25.0
+   ```
+
+3. **Fix Workspace Configuration** (5 minutes):
+   ```bash
+   # Add to root package.json:
+   { "private": true, "license": "MIT" }
+   # Add to web/package.json:
+   { "license": "MIT" }
+   ```
+
+4. **Update Vulnerable Dependencies** (30 minutes):
+   - Target packages using old glob/inflight versions
+   - May require updating rollup plugins and other build tools
+
+**Estimated total effort**: 1.5-2 hours for critical updates
+
 ---
 
 ## 🧬 Alfie Integration (Major Feature)
@@ -258,21 +289,47 @@ yarn lint     # ESLint across all workspaces
 
 ### Known Technical Debt
 
-1. **ESLint CLI Warning**:
+**Critical/High Priority:**
 
+1. **ESLint v8 End of Life**:
+   - `eslint@8.57.1: This version is no longer supported`
+   - **Action**: Upgrade to ESLint v9 across all workspaces
+   - **Impact**: Security vulnerabilities, no future updates
+
+2. **Missing Peer Dependencies**:
+   - Missing `postcss@^8.0.0` for autoprefixer and purgecss
+   - Missing `@babel/core@^7.0.0` for babel-preset-solid
+   - **Action**: Add missing peer dependencies to web/package.json
+
+3. **Glob Package Vulnerabilities**:
+   - `glob@7.2.3: Glob versions prior to v9 are no longer supported`
+   - `inflight@1.0.6: This module is not supported, and leaks memory`
+   - **Action**: Update dependencies that depend on old glob versions
+
+**Medium Priority:**
+
+4. **Vite CJS Deprecation**:
+   - `The CJS build of Vite's Node API is deprecated`
+   - **Action**: Update vite configuration to use ESM
+
+5. **Firebase Functions ESLint Module Warning**:
    - `[MODULE_TYPELESS_PACKAGE_JSON]` warning in functions
-   - Fix: Add `"type": "module"` to functions/package.json
+   - **Action**: Add `"type": "module"` to functions/package.json
 
-2. **Firebase CLI Database Rules Deployment**:
-
+6. **Firebase CLI Database Rules Deployment**:
    - Persistent syntax errors when deploying rules via CLI
-   - Workaround: Manual deployment through Firebase Console
+   - **Workaround**: Manual deployment through Firebase Console
    - Rules file kept in sync for documentation
 
-3. **Node.js Runtime**:
-   - Currently Node 18 (deprecated Apr 2025)
-   - Will upgrade to Node 20 on next function deployment
-   - No code changes needed
+**Quick Fixes:**
+
+7. **Missing License Field**:
+   - `package.json: No license field` in web workspace
+   - **Action**: Add appropriate license to web/package.json
+
+8. **Workspace Privacy Warning**:
+   - `Workspaces can only be enabled in private projects`
+   - **Action**: Add `"private": true` to root package.json
 
 ### Critical Files for New Context
 
@@ -307,9 +364,10 @@ yarn lint     # ESLint across all workspaces
 ### Priority Order:
 
 1. **Submit to Obsidian Store** (blocks user migration)
-2. **Deploy AudioPen deprecation notice**
-3. **Plan Alfie integration** (major feature)
-4. **Address technical debt** (quality improvements)
+2. **Critical Dependency Updates** (security vulnerabilities - ESLint v8 EOL)
+3. **Deploy AudioPen deprecation notice**
+4. **Plan Alfie integration** (major feature)
+5. **Remaining technical debt** (quality improvements)
 
 ### Development Setup:
 
