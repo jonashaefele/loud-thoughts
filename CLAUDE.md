@@ -16,6 +16,12 @@ Monorepo structure with yarn workspaces:
 
 ## Development Commands
 
+**Pre-Release Validation (MANDATORY):**
+```bash
+cd plugin && yarn build    # Must compile without errors
+yarn lint                  # From root - all workspaces must pass
+```
+
 ### Plugin Development
 ```bash
 cd plugin
@@ -53,6 +59,40 @@ yarn lint           # Run ESLint across all workspaces (from root)
 - **Plugin Manifest**: `plugin/manifest.json` - Obsidian plugin metadata
 - **Build Config**: `plugin/vite.config.js` - Custom Vite configuration for plugin build
 
+## Development Best Practices
+
+### 🎯 Core Development Principles
+
+1. **Monorepo Coordination**
+   - Changes to `shared/` types affect all workspaces
+   - Test plugin changes with Firebase emulators before deployment
+   - Verify web dashboard changes don't break webhook generation
+
+2. **Firebase Integration Testing**
+   - Always test with emulators first: `cd functions && yarn serve`
+   - Verify real-time sync works before deploying
+   - Check auth token generation and validation
+
+3. **Obsidian Plugin Standards**
+   - Use `Notice` for user feedback, not console.log
+   - Clean up Firebase listeners in onunload()
+   - Test with different vault configurations
+
+4. **Complete Feature Delivery**
+   - Update all workspaces when adding new services (AudioPen, VoiceNotes, Alfie)
+   - Update templates when adding new variables
+   - Test sync modes (overwrite, append, prepend, new) thoroughly
+
+### 📋 Pre-Release Checklist
+
+**Before releasing new plugin version:**
+- ✅ **Build Check**: `cd plugin && yarn build` - Must compile without errors
+- ✅ **Lint Check**: `yarn lint` from root - All workspaces pass
+- ✅ **Manifest Version**: Update version in `plugin/manifest.json`
+- ✅ **Firebase Deploy**: If functions changed, `cd functions && yarn deploy`
+- ✅ **Test Sync**: Verify sync works with all supported services
+- ✅ **Migration Path**: If breaking changes, provide clear migration instructions
+
 ## Development Patterns
 
 1. **Firebase Real-time Sync**: Plugin listens to Firebase Realtime Database at `/users/{userId}/buffer/` for new notes
@@ -75,3 +115,42 @@ yarn lint           # Run ESLint across all workspaces (from root)
 - Web dashboard is hosted at https://loudthoughts.cloud
 - Plugin supports AudioPen, VoiceNotes, and Alfie services
 - No test suite - rely on ESLint and manual testing
+
+## Developer Onboarding
+
+### Initial Setup
+1. **Clone and Install**
+   ```bash
+   git clone git@github.com:jonashaefele/loud-thoughts.git
+   cd loud-thoughts
+   yarn install
+   ```
+
+2. **Firebase Setup**
+   - Install Firebase CLI: `npm install -g firebase-tools`
+   - Login: `firebase login`
+   - Select project: `firebase use loud-thoughts`
+
+3. **Local Development**
+   ```bash
+   # Terminal 1: Firebase emulators
+   cd functions && yarn serve
+   
+   # Terminal 2: Web dashboard
+   cd web && yarn dev
+   
+   # Terminal 3: Build plugin
+   cd plugin && yarn build
+   ```
+
+4. **Test in Obsidian**
+   - Copy `plugin/dist/*` to your vault's `.obsidian/plugins/loud-thoughts/`
+   - Enable plugin in Obsidian settings
+   - Configure with token from web dashboard
+
+### Common Issues
+
+- **Build fails**: Check Node version (18+ required)
+- **Sync not working**: Verify Firebase project configuration
+- **Plugin not loading**: Check Obsidian console for errors
+- **Template issues**: Verify markdown template syntax
