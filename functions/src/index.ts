@@ -1,11 +1,11 @@
 // Import the required modules individually
+import * as crypto from 'crypto'
 import { onRequest, onCall } from 'firebase-functions/v2/https'
 import { setGlobalOptions } from 'firebase-functions/v2'
-import * as functions from 'firebase-functions'
+import * as functions from 'firebase-functions/v1' // v1 for legacy functions
 import * as admin from 'firebase-admin'
-import * as crypto from 'crypto'
 
-import { BufferItem } from '@shared/types'
+import { BufferItem } from '../../shared/types'
 
 admin.initializeApp()
 
@@ -24,7 +24,7 @@ export const webhook = onRequest({ cors: true }, async (request, response) => {
   const exp = new Date(
     today.getFullYear(),
     today.getMonth(),
-    today.getDate() + 7
+    today.getDate() + 7,
   )
 
   let buffer: BufferItem
@@ -69,7 +69,7 @@ export const webhook = onRequest({ cors: true }, async (request, response) => {
     response
       .status(400)
       .send(
-        'Invalid field types in the request body, needs at least id, title, body and orig_transcript'
+        'Invalid field types in the request body, needs at least id, title, body and orig_transcript',
       )
     return
   }
@@ -95,7 +95,7 @@ export const webhook = onRequest({ cors: true }, async (request, response) => {
 export const newUser = functions
   .region('europe-west1')
   .auth.user()
-  .onCreate((user) => {
+  .onCreate((user: admin.auth.UserRecord) => {
     const key = crypto.randomBytes(24).toString('hex')
     admin.database().ref(`/keys/${key}`).set(user.uid)
     admin.database().ref(`/users/${user.uid}/key`).set(key)
@@ -114,7 +114,7 @@ export const wipe = onCall<WipeData>({ cors: true }, async ({ auth, data }) => {
         if (buffer == null) {
           return buffer
         }
-        // eslint-disable-next-line
+         
         if (typeof buffer == 'object' && data.id !== undefined) {
           return (
             Object.entries(buffer)
@@ -129,7 +129,7 @@ export const wipe = onCall<WipeData>({ cors: true }, async ({ auth, data }) => {
         }
 
         throw new Error(
-          `buffer not as expected ${typeof buffer} ${JSON.stringify(buffer)}`
+          `buffer not as expected ${typeof buffer} ${JSON.stringify(buffer)}`,
         )
       })
     }
@@ -147,7 +147,7 @@ export const wipe = onCall<WipeData>({ cors: true }, async ({ auth, data }) => {
 // V1 function:
 export const generateObsidianToken = functions
   .region('europe-west1')
-  .https.onCall((_data, context) => {
+  .https.onCall((_data: any, context: functions.https.CallableContext) => {
     if (context.auth) {
       return admin.auth().createCustomToken(context.auth.uid)
     }

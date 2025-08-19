@@ -7,7 +7,7 @@ This is based on the amazing work [trashhalo](https://github.com/trashhalo) did 
 ## Setting up the plugin
 
 1. Install the obsidian plugin from the [community plugins](https://obsidian.md/plugins?search=loud-thoughts)
-2. Go to https://loudthoughts.cloud to signup for the service
+2. Go to https://loud-thoughts.web.app to signup for the service
 3. Generate a login token
 4. Use the token to log in the `LoudThoughts` plugin settings in Obsidian
 5. Add the webhook url to AudioPen

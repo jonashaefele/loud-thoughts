@@ -1,14 +1,22 @@
 {
   "rules": {
+    ".read": false,
+    ".write": false,
     "users": {
       "$uid": {
-      	".read": "$uid === auth.uid && auth.provider != 'anonymous'"
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid"
       }
     },
     "buffer": {
       "$uid": {
-        ".read": "$uid === auth.uid && auth.provider != 'anonymous'"
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid"
       }
     },
+    "keys": {
+      ".read": true,
+      ".write": false
+    }
   }
 }

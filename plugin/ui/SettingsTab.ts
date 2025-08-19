@@ -86,7 +86,7 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
         .createEl('p', { text: 'See your buffer and read the docs at ' })
         .createEl('a', {
           text: 'LoudThoughts',
-          href: 'https://loudthoughts.cloud',
+          href: 'https://loud-thoughts.web.app',
         })
 
       new Setting(containerEl)
@@ -319,7 +319,7 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
         .createEl('p', { text: 'Generate a login token at ' })
         .createEl('a', {
           text: 'LoudThoughts',
-          href: 'https://loudthoughts.cloud',
+          href: 'https://loud-thoughts.web.app',
         })
 
       new Setting(containerEl).setName('Webhook login token').addText((text) =>

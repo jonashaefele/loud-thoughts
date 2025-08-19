@@ -8,7 +8,7 @@
         "npm --prefix \"$RESOURCE_DIR\" run lint",
         "npm --prefix \"$RESOURCE_DIR\" run build"
       ],
-      "runtime": "nodejs18",
+      "runtime": "nodejs20",
       "source": "functions",
       "codebase": "default",
       "ignore": [
@@ -21,11 +21,26 @@
     }
   ],
   "hosting": {
-    "public": "public",
+    "public": "web/dist",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Cross-Origin-Opener-Policy",
+            "value": "same-origin-allow-popups"
+          },
+          {
+            "key": "Cross-Origin-Embedder-Policy",
+            "value": "unsafe-none"
+          }
+        ]
+      }
     ],
     "rewrites": [
       {

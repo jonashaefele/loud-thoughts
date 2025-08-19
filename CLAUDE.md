@@ -112,7 +112,7 @@ yarn lint           # Run ESLint across all workspaces (from root)
 
 - Always build plugin with `yarn build` in the plugin directory before testing
 - Firebase functions use Node.js 18 runtime
-- Web dashboard is hosted at https://loudthoughts.cloud
+- Web dashboard is hosted at https://loud-thoughts.web.app
 - Plugin supports AudioPen, VoiceNotes, and Alfie services
 - No test suite - rely on ESLint and manual testing
 

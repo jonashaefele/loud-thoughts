@@ -151,8 +151,8 @@ const Authed = () => {
           {store.obsidianToken && (
             <div class="px-4 pb-4">
               <p>
-                Copy token and paste into the{' '}
-                <strong>AudioPen-Obsidian Sync</strong> plugin settings:
+                Copy token and paste into the <strong>LoudThoughts</strong>{' '}
+                plugin settings:
               </p>
               <input
                 type="text"
@@ -170,11 +170,13 @@ const Authed = () => {
           <h3> Webhook URL </h3>
           <div>
             <ul>
-              <li>Use this URL as your AudioPen or Voicenotes.com webhook.</li>
+              <li>
+                Use this URL as your AudioPen, Voicenotes.com, or Alfie webhook.
+              </li>
               <li>
                 Step by step instructions are in the{' '}
                 <a
-                  href="https://github.com/jonashaefele/audiopen-obsidian?tab=readme-ov-file#4-how-to-add-the-webhook-to-audiopen"
+                  href="https://github.com/jonashaefele/loud-thoughts?tab=readme-ov-file#5-how-to-add-the-webhook-to-audiopen"
                   target="_blank"
                   class="link"
                 >
@@ -187,7 +189,7 @@ const Authed = () => {
             type="text"
             readOnly={true}
             class="form-input"
-            value={`https://europe-west1-audiopen-obsidian.cloudfunctions.net/webhook/${store.key}`}
+            value={`https://europe-west1-loud-thoughts.cloudfunctions.net/webhook/${store.key}`}
             onFocus={handleCopy}
           />
         </div>
@@ -199,7 +201,7 @@ const Authed = () => {
               <h3>You have notes waiting in your buffer</h3>
               <p>
                 If things are not syncing, try clearing the buffer. This won't
-                delete anything from AudioPen/Voicenotes.
+                delete anything from your original apps.
               </p>
             </div>
             <button
@@ -282,7 +284,7 @@ function App() {
       <main class="container bg-white shadow rounded-3xl p-4 md:p-12 my-8">
         <section>
           <hgroup>
-            <h1> AudioPen/Voicenotes Sync for Obsidian</h1>
+            <h1> LoudThoughts - Sync your voice notes to Obsidian</h1>
             <h2>
               Connect{' '}
               <a
@@ -292,15 +294,15 @@ function App() {
               >
                 AudioPen
               </a>
-              {' or '}
+              {', '}
               <a
                 href="https://voicenotes.com/?via=jonas"
                 target="_blank"
                 class="text-[#1b1c1c] underline"
               >
                 Voicenotes
-              </a>{' '}
-              to{' '}
+              </a>
+              {', and Alfie to '}
               <a
                 href="https://obsidian.md/"
                 target="_blank"
