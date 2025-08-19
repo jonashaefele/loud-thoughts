@@ -3,15 +3,15 @@
 import { FirebaseOptions, initializeApp } from 'firebase/app'
 
 const firebaseConfig: FirebaseOptions = {
-  apiKey: 'AIzaSyBN58Umn62jNrSPTSU_f7wMqBX5M1aGfZ4',
-  authDomain: 'audiopen-obsidian.firebaseapp.com',
+  apiKey: 'AIzaSyB7E8hJ5lcOITiBwA0HrPSeHe3ns-2-GAk',
+  authDomain: 'loud-thoughts.firebaseapp.com',
   databaseURL:
-    'wss://audiopen-obsidian-default-rtdb.europe-west1.firebasedatabase.app',
-  projectId: 'audiopen-obsidian',
-  storageBucket: 'audiopen-obsidian.appspot.com',
-  messagingSenderId: '548543351364',
-  appId: '1:548543351364:web:d3ed2b4e2384d242c68a11',
-  measurementId: 'G-93WY19MK85',
+    'https://loud-thoughts-default-rtdb.europe-west1.firebasedatabase.app',
+  projectId: 'loud-thoughts',
+  storageBucket: 'loud-thoughts.firebasestorage.app',
+  messagingSenderId: '909058117274',
+  appId: '1:909058117274:web:b9bda7711cb08fd7d55923',
+  measurementId: 'G-NE273130WT',
 }
 
 const app = initializeApp(firebaseConfig)
