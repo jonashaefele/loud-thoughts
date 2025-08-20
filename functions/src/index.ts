@@ -7,6 +7,7 @@ import * as functions from 'firebase-functions/v1' // v1 for legacy functions
 import * as admin from 'firebase-admin'
 
 import { BufferItem } from '../../shared/types'
+import { ProviderRegistry } from './providers'
 
 admin.initializeApp()
 
@@ -21,74 +22,67 @@ export const webhook = onRequest({ cors: true }, async (request, response) => {
     return
   }
 
+  // Find the appropriate provider for this payload
+  const provider = ProviderRegistry.findProvider(request.body)
+  
+  if (!provider) {
+    response
+      .status(400)
+      .send('Unsupported webhook format - no provider found for this payload')
+    return
+  }
+
+  // Validate the payload
+  if (!provider.validate(request.body)) {
+    response
+      .status(400)
+      .send(`Invalid ${provider.name} payload - missing required fields`)
+    return
+  }
+
+  // Transform the payload to our buffer format
+  const bufferData = provider.transform(request.body)
+  
+  // Create the buffer item with expiration
   const today = new Date()
   const exp = new Date(
     today.getFullYear(),
     today.getMonth(),
     today.getDate() + 7,
   )
-
-  let buffer: BufferItem
-  // Validate the required fields and their types
-  if (
-    typeof request.body.data?.id === 'string' &&
-    typeof request.body.data?.title === 'string' &&
-    typeof request.body.data?.transcript === 'string'
-  ) {
-    // voicenotes
-    buffer = { ...request.body }
-    buffer.data.platform = 'voicenotes'
-    buffer.data.timestamp = request.body.timestamp || new Date().toISOString()
-
-    if (!buffer.id) buffer.id = request.body.data.id
-  } else if (
-    typeof request.body.id === 'string' ||
-    typeof request.body.title === 'string' ||
-    typeof request.body.body === 'string' ||
-    typeof request.body.orig_transcript === 'string'
-  ) {
-    // audiopen
-    const { id, title, body, orig_transcript, tags, date_created } =
-      request.body
-    buffer = {
-      id: id,
-      exp,
-      data: {
-        platform: 'audiopen',
-        id,
-        title,
-        body,
-        orig_transcript,
-        tags:
-          typeof tags === 'string'
-            ? tags.split(',').map((tag) => tag.trim())
-            : [],
-        date_created,
-      },
-    }
-  } else {
-    response
-      .status(400)
-      .send(
-        'Invalid field types in the request body, needs at least id, title, body and orig_transcript',
-      )
-    return
+  
+  const buffer: BufferItem = {
+    id: bufferData.id,
+    exp,
+    data: {
+      platform: bufferData.platform as 'audiopen' | 'voicenotes' | 'alfie',
+      id: bufferData.id,
+      title: bufferData.title,
+      content: bufferData.content,
+      orig_transcript: bufferData.orig_transcript,
+      tags: bufferData.tags || [],
+      date_created: bufferData.date_created,
+      ...(bufferData.timestamp && { timestamp: bufferData.timestamp }),
+      ...(bufferData.metadata && { metadata: bufferData.metadata }),
+    },
   }
 
-  // check if note is already in buffer
+  // Check if note is already in buffer
   const db = admin.database()
   const bufferRef = db.ref(`/buffer/${user}`)
   const snapshot = await bufferRef
     .orderByChild('data/id')
     .equalTo(buffer.id)
     .once('value')
-  // update if exists, else push
+    
+  // Update if exists, else push
   if (snapshot.exists()) {
     const itemKey = Object.keys(snapshot.val())[0]
     await bufferRef.child(itemKey).set(buffer)
   } else {
     await bufferRef.push(buffer)
   }
+  
   response.send('ok')
 })
 

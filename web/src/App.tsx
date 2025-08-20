@@ -218,7 +218,7 @@ const Authed = () => {
             <div class="bg-neutral-hint shadow-sm my-4 p-4 pl-6 rounded-xl flex flex-col md:flex-row md:justify-between items-center">
               <div>
                 <h3>{v.data.title}</h3>
-                <p>{v.data.body.substring(0, 300)} ...</p>
+                <p>{v.data.content.substring(0, 300)} ...</p>
               </div>
               <button
                 onClick={() => handleClearClick(v.data.id)}

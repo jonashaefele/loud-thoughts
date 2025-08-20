@@ -1,13 +1,13 @@
 export interface BufferItemData {
   id: string
   title: string
-  body: string
-  transcript?: string
+  content: string
   orig_transcript?: string
   tags: string[]
   date_created?: string
   timestamp?: string
-  platform: 'voicenotes' | 'audiopen'
+  platform: 'voicenotes' | 'audiopen' | 'alfie'
+  metadata?: Record<string, unknown> // For provider-specific data
 }
 
 export interface BufferItem {

@@ -173,7 +173,7 @@ export default class LoudThoughtsPlugin extends Plugin {
       })
 
       if (this.settings.debug)
-        console.log('AudioPen/Voicenotes payloads', payloads)
+        console.log('Voice notes payloads', payloads)
 
       // filter unique payloads, if we have the updates of the same note in the buffer
       // obsidian cache doesn't update fast enough, so we need to only save the latest version.
@@ -183,14 +183,13 @@ export default class LoudThoughtsPlugin extends Plugin {
       )
 
       if (this.settings.debug)
-        console.log('AudioPen/Voicenotes unique payloads', uniquePayloads)
+        console.log('Voice notes unique payloads', uniquePayloads)
 
       // Create or update notes, then delete form buffer
       let promiseChain = Promise.resolve()
       for (const payload of uniquePayloads) {
         promiseChain = promiseChain.then(async () => {
-          payload.platform =
-            payload.orig_transcript !== undefined ? 'audiopen' : 'voicenotes'
+          // Platform is now set by the webhook provider system
           if (this.settings.debug)
             console.log(`Syncing ${payload.platform} note`, payload)
           await this.applyEvent(payload)
@@ -201,15 +200,15 @@ export default class LoudThoughtsPlugin extends Plugin {
       await promiseChain
       // TODO: Should this be the last? Or the last touched, which is the first?
       promiseChain.catch((err) => {
-        this.handleError(err, 'Error loading AudioPen/Voicenotes notes')
+        this.handleError(err, 'Error loading voice notes')
       })
       this.syncStatus = 'ok'
       this.updateStatusBarIcon() // All events processed, set color to gray
-      new Notice('New AudioPen/Voicenotes notes loaded')
+      new Notice('New voice notes loaded')
     } catch (err) {
       this.syncStatus = 'error'
       this.updateStatusBarIcon()
-      this.handleError(err, 'Error loading AudioPen/Voicenotes notes')
+      this.handleError(err, 'Error loading voice notes')
       throw err
     } finally {
     }
@@ -239,8 +238,7 @@ export default class LoudThoughtsPlugin extends Plugin {
   }
 
   applyEvent = async ({
-    body = '',
-    transcript = '', // TODO: only have body OR transcript
+    content = '',
     orig_transcript,
     title = '',
     tags = [],
@@ -248,6 +246,7 @@ export default class LoudThoughtsPlugin extends Plugin {
     date_created = '',
     timestamp = '',
     platform = 'audiopen',
+    metadata,
   }: BufferItemData) => {
     // audiopen changed it's date format, so we need to parse it
     const parsedDate =
@@ -264,14 +263,14 @@ export default class LoudThoughtsPlugin extends Plugin {
       )
 
     let newContent = await this.generateMarkdownContent({
-      body,
-      transcript: transcript.replace(/\<br\/\>/g, '\n'), // voienotes uses  <br> instead of new line
+      content: content.replace(/\<br\/\>/g, '\n'), // voicenotes uses <br> instead of new line
       orig_transcript,
       title,
       tags,
       id,
       platform,
       timestamp: parsedDate,
+      metadata,
     })
 
     const existingFiles = this.app.vault.getMarkdownFiles().filter((file) => {
@@ -322,12 +321,12 @@ export default class LoudThoughtsPlugin extends Plugin {
       case 'append':
         updatedContent = `${existingContent}${this.getNewLine()}#V${
           existingFiles.length + 1
-        }${this.getNewLine()}${body}`
+        }${this.getNewLine()}${content}`
         break
       case 'prepend':
         updatedContent = `#V${
           existingFiles.length + 1
-        }${this.getNewLine()}${body}${this.getNewLine()}${existingContent}`
+        }${this.getNewLine()}${content}${this.getNewLine()}${existingContent}`
         break
       default:
         throw new Error('Invalid update mode')
@@ -336,16 +335,18 @@ export default class LoudThoughtsPlugin extends Plugin {
     await this.app.vault.modify(existingFiles[0], updatedContent)
   }
 
-  generateMarkdownContent = async ({
-    body,
-    transcript,
-    orig_transcript,
-    title,
-    tags,
-    id,
-    timestamp,
-    platform,
-  }: BufferItemData): Promise<string> => {
+  generateMarkdownContent = async (
+    {
+      content,
+      orig_transcript,
+      title,
+      tags,
+      id,
+      timestamp,
+      platform,
+      metadata,
+    }: BufferItemData,
+  ): Promise<string> => {
     let markdownTemplate: string
     if (!this.settings.useCustomTemplate) {
       // default templates
@@ -400,17 +401,16 @@ export default class LoudThoughtsPlugin extends Plugin {
             .join('\n')
         : ''
 
-    console.log(body, orig_transcript, title, tags, id, timestamp)
+    console.log(content, orig_transcript, title, tags, id, timestamp)
 
-    return markdownTemplate
+    // Extract Alfie-specific metadata if available
+    const alfieMetadata = metadata || {}
+    const context = (alfieMetadata as any).conversationContext || {}
+    
+    let processedTemplate = markdownTemplate
       .replace(/{title}/g, title)
-      .replace(/{body}/g, platform === 'audiopen' ? body : transcript)
-      .replace(
-        /{orig_transcript}/g,
-        platform === 'audiopen'
-          ? orig_transcript || body
-          : transcript.replace(/\n/g, ' ')
-      )
+      .replace(/{content}/g, content || '')
+      .replace(/{body}/g, content || '') // Keep {body} for backward compatibility
       .replace(/{id}/g, id)
       .replace(/{date_created}/g, timestamp)
       .replace(
@@ -421,6 +421,23 @@ export default class LoudThoughtsPlugin extends Plugin {
       .replace(/{tagsAsLinks}/g, tagsAsLinks)
       .replace(/{tagsAsTags}/g, tagsAsTags)
       .replace(/{platform}/g, platform)
+      // Alfie-specific template variables
+      .replace(/{mood}/g, context.mood || '')
+      .replace(/{needs}/g, context.needs || '')
+      .replace(/{energy}/g, context.energy?.toString() || '')
+      .replace(/{location}/g, context.location || '')
+      .replace(/{timeOfDay}/g, context.timeOfDay || '')
+      .replace(/{timeAvailable}/g, context.timeAvailable || '')
+
+    // Conditionally replace orig_transcript with callout format if available
+    if (orig_transcript) {
+      const calloutFormat = `> [!Original Transcript]-\n> \n> ${orig_transcript.replace(/\n/g, '\n> ')}`
+      processedTemplate = processedTemplate.replace(/{orig_transcript}/g, calloutFormat)
+    } else {
+      processedTemplate = processedTemplate.replace(/{orig_transcript}/g, '')
+    }
+
+    return processedTemplate
   }
 
   getNewLine(): string {

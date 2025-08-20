@@ -1,21 +1,17 @@
 ---
 created: {date_created}
-up: "[[AudioPen]]"
+up: "[[LoudThoughts]]"
 {linkProperty}:
   - "[[{date_formatted}]]"
 aliases:
 tags: 
   - {platform}
 {tagsAsTags}
-audioPenID: "{id}"
+platformID: "{id}"
 ---
 
 # {title}
 
-{body}
-
----
-
-#### Original Transcript
+{content}
 
 {orig_transcript}

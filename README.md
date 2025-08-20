@@ -41,8 +41,8 @@ You can create custom templates for your notes by creating a `loudthoughts-templ
 
 ### 1. Choose a starting point for your template:
 
-- [Template with AudioPen tags as Obsidian Links](plugin/templates/template-links.md?plain=1)
-- [Template with AudioPen tags as Obsidian tags](plugin/templates/template-tags.md?plain=1)
+- [Template with tags as Obsidian Links](plugin/templates/template-links.md?plain=1)
+- [Template with tags as Obsidian tags](plugin/templates/template-tags.md?plain=1)
 
 ### 2. Save it to your vault's template folder
 
@@ -50,15 +50,20 @@ You can create custom templates for your notes by creating a `loudthoughts-templ
 
 You can use the following variables in your template:
 
-- `{title}` - title of the AudioPen note
-- `{body}` - rewritten version of the note
+- `{title}` - title of the note
+- `{content}` - main content of the note (cleaned text for AudioPen, transcript for VoiceNotes, reflection for Alfie)
+- `{body}` - deprecated, use `{content}` instead (kept for compatibility)
 - `{orig_transcript}` - original transcript of the note
-- `{id}` - AudioPenID - if you remove this from the template, it won't be able to append or update notes and will always create a new one.
-- `{date_created}` - date created in AudioPen
+- `{id}` - unique note ID - if you remove this from the template, it won't be able to append or update notes and will always create a new one.
+- `{date_created}` - date created
 - `{date_formatted}` - date created formatted to link to your daily notes, uses settings in periodic notes plugin, or daily notes plugin if periodic notes isn't installed.
-- `{tagsAsLinks}` - AudioPen tags formatted as list of `[[Links]]` for Obsidian properties
-- `{tagsAsTags}` - AudioPen tags formatted as a list of tags for Obsidian properties
-- `{platform}` - platform used to transcribe the note (audiopen or voicenotes)
+- `{tagsAsLinks}` - tags formatted as list of `[[Links]]` for Obsidian properties
+- `{tagsAsTags}` - tags formatted as a list of tags for Obsidian properties  
+- `{platform}` - platform used to transcribe the note (audiopen, voicenotes, or alfie)
+
+### Alfie Integration
+
+Alfie reflections work seamlessly with the existing templates! The rich conversation context (mood, energy, needs, location, etc.) is automatically converted to searchable tags like `mood/excited`, `energy/4`, `needs/process`. No special template needed - just use the standard templates above and all your Alfie context will be preserved as tags.
 
 > **Note:**
 > Both `{tagsAsLinks}` and `{tagsAsTags}` are rendered as a simple list like:
