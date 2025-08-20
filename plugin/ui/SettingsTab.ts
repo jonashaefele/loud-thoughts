@@ -245,7 +245,7 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
         })
         containerEl.createEl('a', {
           text: 'Check the README for more information',
-          href: 'https://github.com/jonashaefele/audiopen-obsidian#custom-templates',
+          href: 'https://github.com/jonashaefele/loud-thoughts#custom-templates',
         })
 
         new Setting(containerEl)

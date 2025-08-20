@@ -110,7 +110,7 @@ export default class LoudThoughtsPlugin extends Plugin {
 
     menu.addItem((item) =>
       item.setTitle('Open buffer').onClick(() => {
-        window.open('https://audiopen-obsidian.web.app', '_blank')
+        window.open('https://loud-thoughts.web.app', '_blank')
       })
     )
 
