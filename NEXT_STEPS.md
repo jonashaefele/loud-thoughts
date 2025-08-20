@@ -4,9 +4,35 @@ _Migration from AudioPen Obsidian Plugin completed on August 19, 2025_
 
 ## 🎯 Immediate Next Steps (Required)
 
-### 1. Submit to Obsidian Community Store
+### 1. ✅ Fix generateObsidianToken Function Error
 
-**Status**: Ready for submission
+**Status**: FIXED - Added IAM Service Account Token Creator role
+**Priority**: CRITICAL (blocks all new user onboarding)
+
+**Solution Applied**: 
+```bash
+gcloud iam service-accounts add-iam-policy-binding \
+  loud-thoughts@appspot.gserviceaccount.com \
+  --member="serviceAccount:loud-thoughts@appspot.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountTokenCreator" \
+  --project=loud-thoughts
+```
+
+### 1.5. ✅ Fix Webhook Authentication Error
+
+**Status**: FIXED - Enabled public access for webhook endpoint
+**Solution Applied**:
+```bash
+gcloud run services add-iam-policy-binding webhook \
+  --member="allUsers" \
+  --role="roles/run.invoker" \
+  --region=europe-west1 \
+  --project=loud-thoughts
+```
+
+### 2. Submit to Obsidian Community Store
+
+**Status**: Ready for submission (after fixing generateObsidianToken)
 **Priority**: High (blocks user migration)
 
 **Steps**:
@@ -40,7 +66,7 @@ _Migration from AudioPen Obsidian Plugin completed on August 19, 2025_
 
 **Requirements Documentation**: [Obsidian Plugin Guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines)
 
-### 2. AudioPen Plugin Deprecation
+### 3. AudioPen Plugin Deprecation
 
 **Status**: Deprecation notice prepared, needs final deployment
 **Priority**: Medium (prevents user confusion)
@@ -57,7 +83,7 @@ _Migration from AudioPen Obsidian Plugin completed on August 19, 2025_
 
 2. **After 3-6 months**: Submit removal request to obsidian-releases `obsolete.json`
 
-### 3. Documentation Updates
+### 4. Documentation Updates
 
 **Status**: Needs completion
 **Priority**: Medium
@@ -363,8 +389,8 @@ yarn lint     # ESLint across all workspaces
 
 ### Priority Order:
 
-1. **Submit to Obsidian Store** (blocks user migration)
-2. **Critical Dependency Updates** (security vulnerabilities - ESLint v8 EOL)
+1. **Fix generateObsidianToken function** (CRITICAL - blocks all user onboarding)
+2. **Submit to Obsidian Store** (blocks user migration)
 3. **Deploy AudioPen deprecation notice**
 4. **Plan Alfie integration** (major feature)
 5. **Remaining technical debt** (quality improvements)

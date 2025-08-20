@@ -1,4 +1,5 @@
 // Import the required modules individually
+// Updated for Node.js 20 runtime
 import * as crypto from 'crypto'
 import { onRequest, onCall } from 'firebase-functions/v2/https'
 import { setGlobalOptions } from 'firebase-functions/v2'

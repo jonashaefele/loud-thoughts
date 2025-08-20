@@ -9,6 +9,7 @@ LoudThoughts Plugin - A sync service connecting Obsidian notes to AudioPen, Voic
 ## Architecture
 
 Monorepo structure with yarn workspaces:
+
 - `plugin/` - Obsidian plugin (TypeScript, Vite build)
 - `functions/` - Firebase Cloud Functions (Node.js 18)
 - `web/` - Web dashboard (SolidJS + TailwindCSS)
@@ -17,18 +18,21 @@ Monorepo structure with yarn workspaces:
 ## Development Commands
 
 **Pre-Release Validation (MANDATORY):**
+
 ```bash
 cd plugin && yarn build    # Must compile without errors
 yarn lint                  # From root - all workspaces must pass
 ```
 
 ### Plugin Development
+
 ```bash
 cd plugin
 yarn build          # Build plugin to dist/
 ```
 
 ### Firebase Functions
+
 ```bash
 cd functions
 yarn build          # Compile TypeScript
@@ -37,7 +41,10 @@ yarn deploy         # Deploy to Firebase
 yarn logs           # View function logs
 ```
 
+**IMPORTANT**: Always use `yarn` instead of `npm` for all commands in this project!
+
 ### Web Dashboard
+
 ```bash
 cd web
 yarn dev            # Development server
@@ -46,6 +53,7 @@ yarn serve          # Preview build
 ```
 
 ### Code Quality
+
 ```bash
 yarn lint           # Run ESLint across all workspaces (from root)
 ```
@@ -64,16 +72,19 @@ yarn lint           # Run ESLint across all workspaces (from root)
 ### 🎯 Core Development Principles
 
 1. **Monorepo Coordination**
+
    - Changes to `shared/` types affect all workspaces
    - Test plugin changes with Firebase emulators before deployment
    - Verify web dashboard changes don't break webhook generation
 
 2. **Firebase Integration Testing**
+
    - Always test with emulators first: `cd functions && yarn serve`
    - Verify real-time sync works before deploying
    - Check auth token generation and validation
 
 3. **Obsidian Plugin Standards**
+
    - Use `Notice` for user feedback, not console.log
    - Clean up Firebase listeners in onunload()
    - Test with different vault configurations
@@ -86,6 +97,7 @@ yarn lint           # Run ESLint across all workspaces (from root)
 ### 📋 Pre-Release Checklist
 
 **Before releasing new plugin version:**
+
 - ✅ **Build Check**: `cd plugin && yarn build` - Must compile without errors
 - ✅ **Lint Check**: `yarn lint` from root - All workspaces pass
 - ✅ **Manifest Version**: Update version in `plugin/manifest.json`
@@ -116,41 +128,75 @@ yarn lint           # Run ESLint across all workspaces (from root)
 - Plugin supports AudioPen, VoiceNotes, and Alfie services
 - No test suite - rely on ESLint and manual testing
 
-## Developer Onboarding
+### 🤝 Working Session Guidelines
 
-### Initial Setup
-1. **Clone and Install**
-   ```bash
-   git clone git@github.com:jonashaefele/loud-thoughts.git
-   cd loud-thoughts
-   yarn install
-   ```
+**Planning and Communication:**
 
-2. **Firebase Setup**
-   - Install Firebase CLI: `npm install -g firebase-tools`
-   - Login: `firebase login`
-   - Select project: `firebase use loud-thoughts`
+- Ask clarifying questions for complex plans - multiple implementation approaches require discussion
+- Request business context when logic isn't clear
+- Essential for longer plans: Ask several questions to gain crucial context
 
-3. **Local Development**
-   ```bash
-   # Terminal 1: Firebase emulators
-   cd functions && yarn serve
-   
-   # Terminal 2: Web dashboard
-   cd web && yarn dev
-   
-   # Terminal 3: Build plugin
-   cd plugin && yarn build
-   ```
+**Session Management:**
 
-4. **Test in Obsidian**
-   - Copy `plugin/dist/*` to your vault's `.obsidian/plugins/loud-thoughts/`
-   - Enable plugin in Obsidian settings
-   - Configure with token from web dashboard
+- Track progress with clear status updates for transparency
+- Document as you go - implementation-time docs are more accurate
+- Batch operations for efficiency when possible
 
-### Common Issues
+**Common Anti-Patterns to Avoid:**
 
-- **Build fails**: Check Node version (18+ required)
-- **Sync not working**: Verify Firebase project configuration
-- **Plugin not loading**: Check Obsidian console for errors
-- **Template issues**: Verify markdown template syntax
+- TypeScript compilation issues - use proper type assertions with TODO comments
+- Test suite mismatches - verify expectations match implementation
+- Migration context loss - understand original data flow before refactoring
+
+## Documentation Standards
+
+### File Structure and Maintenance
+
+**CLAUDE.md (this file)**
+
+- Current implementation guidance and architecture
+- Development commands and setup instructions
+- Code patterns, conventions, and best practices
+- **Contains current state only** - not backlog or completed work
+
+**BACKLOG.md** (if used)
+
+- Future work and sprint planning
+- Prioritized features with implementation estimates
+- **Forward-looking only** - no completed items
+
+**CHANGELOG.md** (if used)
+
+- Historical record of completed work with semantic versioning
+- **Historical record only** - no future plans
+
+### Release Notes Guidelines
+
+**Tone and Style:**
+
+- Friendly, conversational tone - like messaging a colleague
+- Avoid superlatives and marketing speak ("rock solid", "bulletproof")
+- Acknowledge that software is always work-in-progress
+- Focus on practical impact on daily operations
+
+**Structure Example:**
+
+```markdown
+## [Version] - [Date]
+
+### 🎯 What This Means for You
+
+[Practical impact in conversational tone]
+
+### ✨ User Experience Improvements
+
+[User-facing changes and improvements]
+
+### 🔧 What We Improved Behind the Scenes
+
+[Technical improvements and bug fixes]
+
+### 🛠️ Technical Implementation
+
+[Architecture and development details]
+```
