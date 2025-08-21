@@ -404,8 +404,18 @@ export default class LoudThoughtsPlugin extends Plugin {
     console.log(content, orig_transcript, title, tags, id, timestamp)
 
     // Extract Alfie-specific metadata if available
-    const alfieMetadata = metadata || {}
-    const context = (alfieMetadata as any).conversationContext || {}
+    interface AlfieMetadata {
+      conversationContext?: {
+        mood?: string
+        needs?: string
+        energy?: number
+        location?: string
+        timeOfDay?: string
+        timeAvailable?: string
+      }
+    }
+    const alfieMetadata = (metadata || {}) as AlfieMetadata
+    const context = alfieMetadata.conversationContext || {}
     
     let processedTemplate = markdownTemplate
       .replace(/{title}/g, title)

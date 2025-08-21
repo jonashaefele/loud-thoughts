@@ -5,13 +5,13 @@ export class AudioPenProvider extends BaseProvider {
   name = 'audiopen'
   
   canHandle(payload: unknown): boolean {
-    const p = payload as any
+    const p = payload as AudioPenPayload
     // AudioPen has these specific fields at root level
     return !!(
       p?.id && 
       (p?.body || p?.orig_transcript) &&
-      !p?.data && // VoiceNotes has data wrapper
-      !p?.reflection_id // Alfie has reflection_id
+      !(payload as Record<string, unknown>)?.data && // VoiceNotes has data wrapper
+      !(payload as Record<string, unknown>)?.reflection_id // Alfie has reflection_id
     )
   }
   

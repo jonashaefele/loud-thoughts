@@ -5,7 +5,7 @@ export class AlfieProvider extends BaseProvider {
   name = 'alfie'
   
   canHandle(payload: unknown): boolean {
-    const p = payload as any
+    const p = payload as AlfiePayload
     // Alfie has reflection_id and content
     return !!(
       p?.reflection_id &&

@@ -5,7 +5,7 @@ export class VoiceNotesProvider extends BaseProvider {
   name = 'voicenotes'
   
   canHandle(payload: unknown): boolean {
-    const p = payload as any
+    const p = payload as VoiceNotesPayload
     // VoiceNotes has a data wrapper with specific fields
     return !!(
       p?.data?.id &&
