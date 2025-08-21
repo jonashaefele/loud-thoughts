@@ -15,6 +15,8 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '20.x' # You might need to adjust this value to your own version
+      - name: Enable Corepack
+        run: corepack enable
       # Get the version number and put it in a variable
       - name: Get package version
         id: package-version
@@ -22,14 +24,10 @@ jobs:
           VERSION=$(jq -r '.version' plugin/manifest.json)
           echo "::set-output name=version::$VERSION"
       # Build the plugin
-      - name: Run install
-        uses: borales/actions-yarn@v4
-        with:
-          cmd: install # will run `yarn install` command
+      - name: Install dependencies
+        run: yarn install
       - name: Build production bundle
-        uses: borales/actions-yarn@v4
-        with:
-          cmd: workspace plugin build # will run `yarn build:prod` command
+        run: yarn workspace plugin build
       # Package the required files into a zip
       - name: Package
         run: |
