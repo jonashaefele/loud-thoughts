@@ -1,7 +1,7 @@
 {
   "id": "loud-thoughts",
   "name": "LoudThoughts",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "minAppVersion": "1.6.0",
   "description": "Sync your thoughts from AudioPen, VoiceNotes, and Alfie to Obsidian.",
   "author": "Jonas Haefele",

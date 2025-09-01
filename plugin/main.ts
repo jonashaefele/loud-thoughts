@@ -16,6 +16,7 @@ import {
   goOnline,
   onValue,
   ref,
+  forceWebSockets,
 } from 'firebase/database'
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import { default as firebaseApp } from '../shared/firebase'
@@ -44,6 +45,17 @@ export default class LoudThoughtsPlugin extends Plugin {
     await this.loadSettings()
     console.log('Loaded LoudThoughts plugin, debug:', this.settings.debug)
     this.firebase = firebaseApp
+
+    // Force WebSockets to avoid iframe issues in Obsidian
+    try {
+      forceWebSockets()
+      if (this.settings.debug) {
+        console.log('Firebase: Forced WebSocket connections')
+      }
+    } catch (error) {
+      console.error('Failed to force WebSockets:', error)
+    }
+
     this.authUnsubscribe = getAuth(this.firebase).onAuthStateChanged((user) => {
       if (this.valUnsubscribe) {
         this.valUnsubscribe()
@@ -149,7 +161,7 @@ export default class LoudThoughtsPlugin extends Plugin {
       await goOffline(db)
     } finally {
       await goOnline(db)
-      new Notice('Reset AudioPen buffer connection')
+      new Notice('Reset LoudThoughts buffer connection')
     }
   }
 
@@ -172,8 +184,7 @@ export default class LoudThoughtsPlugin extends Plugin {
         }
       })
 
-      if (this.settings.debug)
-        console.log('Voice notes payloads', payloads)
+      if (this.settings.debug) console.log('Voice notes payloads', payloads)
 
       // filter unique payloads, if we have the updates of the same note in the buffer
       // obsidian cache doesn't update fast enough, so we need to only save the latest version.
@@ -335,18 +346,16 @@ export default class LoudThoughtsPlugin extends Plugin {
     await this.app.vault.modify(existingFiles[0], updatedContent)
   }
 
-  generateMarkdownContent = async (
-    {
-      content,
-      orig_transcript,
-      title,
-      tags,
-      id,
-      timestamp,
-      platform,
-      metadata,
-    }: BufferItemData,
-  ): Promise<string> => {
+  generateMarkdownContent = async ({
+    content,
+    orig_transcript,
+    title,
+    tags,
+    id,
+    timestamp,
+    platform,
+    metadata,
+  }: BufferItemData): Promise<string> => {
     let markdownTemplate: string
     if (!this.settings.useCustomTemplate) {
       // default templates
@@ -416,7 +425,7 @@ export default class LoudThoughtsPlugin extends Plugin {
     }
     const alfieMetadata = (metadata || {}) as AlfieMetadata
     const context = alfieMetadata.conversationContext || {}
-    
+
     let processedTemplate = markdownTemplate
       .replace(/{title}/g, title)
       .replace(/{content}/g, content || '')
@@ -441,8 +450,14 @@ export default class LoudThoughtsPlugin extends Plugin {
 
     // Conditionally replace orig_transcript with callout format if available
     if (orig_transcript) {
-      const calloutFormat = `> [!Original Transcript]-\n> \n> ${orig_transcript.replace(/\n/g, '\n> ')}`
-      processedTemplate = processedTemplate.replace(/{orig_transcript}/g, calloutFormat)
+      const calloutFormat = `> [!Original Transcript]-\n> \n> ${orig_transcript.replace(
+        /\n/g,
+        '\n> '
+      )}`
+      processedTemplate = processedTemplate.replace(
+        /{orig_transcript}/g,
+        calloutFormat
+      )
     } else {
       processedTemplate = processedTemplate.replace(/{orig_transcript}/g, '')
     }
