@@ -5,6 +5,7 @@ import {
   Plugin,
   TFile,
   setIcon,
+  normalizePath,
   // addIcon,
 } from 'obsidian'
 import { getAuth, Unsubscribe } from 'firebase/auth'
@@ -43,7 +44,7 @@ export default class LoudThoughtsPlugin extends Plugin {
 
   async onload() {
     await this.loadSettings()
-    console.log('Loaded LoudThoughts plugin, debug:', this.settings.debug)
+    if (this.settings.debug) console.log('Loaded LoudThoughts plugin')
     this.firebase = firebaseApp
 
     // Force WebSockets to avoid iframe issues in Obsidian
@@ -148,7 +149,7 @@ export default class LoudThoughtsPlugin extends Plugin {
     const syncStatus = this.getSyncStatus()
     icon.setAttr('data-tooltip-position', 'top')
     icon.setAttr('aria-label', syncStatus)
-    icon.addClass(`mod-${this.syncStatus}`)
+    icon.addClass(`loud-thoughts-mod-${this.syncStatus}`)
   }
 
   forceBufferSync = async () => {
@@ -343,7 +344,7 @@ export default class LoudThoughtsPlugin extends Plugin {
         throw new Error('Invalid update mode')
     }
 
-    await this.app.vault.modify(existingFiles[0], updatedContent)
+    await this.app.vault.process(existingFiles[0], () => updatedContent)
   }
 
   generateMarkdownContent = async ({
@@ -410,7 +411,8 @@ export default class LoudThoughtsPlugin extends Plugin {
             .join('\n')
         : ''
 
-    console.log(content, orig_transcript, title, tags, id, timestamp)
+    if (this.settings.debug)
+      console.log(content, orig_transcript, title, tags, id, timestamp)
 
     // Extract Alfie-specific metadata if available
     interface AlfieMetadata {
@@ -486,11 +488,11 @@ export default class LoudThoughtsPlugin extends Plugin {
   generateFilePath(title: string): string {
     // Implement the logic to generate the file path based on the title
     // and the user's folder preference
-    const folderPath = this.settings.folderPath || '+ Inbox/AudioPen'
+    const folderPath = this.settings.folderPath || '+ Inbox/Loud Thoughts'
     const fileName = title
       .replace(/[\\/:*?'"<>.|]/g, '') // Remove reserved characters for file names
       .slice(0, 250) // Limit the file name to 250 characters
-    return `${folderPath}/${fileName}.md`
+    return normalizePath(`${folderPath}/${fileName}.md`)
   }
 
   onunload() {
