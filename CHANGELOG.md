@@ -2,7 +2,7 @@
 
 All notable changes to LoudThoughts will be documented in this file.
 
-## [1.2.2] - 2025-12-08
+## [1.2.3] - 2025-12-08
 
 ### 🎯 What This Means for You
 
