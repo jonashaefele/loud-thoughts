@@ -2,6 +2,60 @@
 
 All notable changes to LoudThoughts will be documented in this file.
 
+## [1.2.2] - 2025-12-08
+
+### 🎯 What This Means for You
+
+This release addresses feedback from the Obsidian plugin directory review. No new features, just polish and best practices to ensure the plugin plays nicely with other plugins and follows Obsidian's guidelines.
+
+### 🔧 What We Improved Behind the Scenes
+
+- **CSS class naming** - All CSS classes now use `loud-thoughts-` prefix to avoid conflicts with other plugins
+- **Cleaner console output** - Debug logs are now properly guarded and won't clutter your console unless you enable debug mode
+- **Better file handling** - Using `Vault.process()` for safer concurrent file modifications
+- **Path normalization** - User-defined folder paths are now properly normalized
+- **UI text consistency** - Fixed sentence casing throughout the settings panel
+- **Moved inline styles to CSS** - Better theme and snippet compatibility for donation buttons
+- **Aligned Firebase versions** - All workspaces now use Firebase SDK v12 for consistent behavior
+
+---
+
+## [1.2.0] - 2025-09-01
+
+### 🎯 What This Means for You
+
+Obsidian started blocking Firebase's iframe-based authentication, which broke login for some users. This release fixes that by upgrading to Firebase SDK v12 and forcing WebSocket connections instead.
+
+### 🔧 What We Improved Behind the Scenes
+
+- Upgraded Firebase SDK from v10 to v12
+- Forced WebSocket connections to bypass iframe authentication blocks
+- Improved connection reliability in Obsidian's environment
+
+---
+
+## [1.1.0] - 2025-08-20
+
+### 🎯 What This Means for You
+
+LoudThoughts now speaks multiple languages - well, multiple voice note services anyway. This release introduces a proper multi-platform architecture, so AudioPen, VoiceNotes, and Alfie all feel like first-class citizens.
+
+### ✨ User Experience Improvements
+
+- **Multi-platform provider architecture** - AudioPen, VoiceNotes, and Alfie all supported through a unified system
+- **Smarter transcript display** - Original transcripts now appear in a collapsible callout format
+- **Rich Alfie integration** - Automatic metadata tag generation for mood, energy, location, and more
+- **Better template variables** - `{content}` replaces `{body}` (backward compatible), plus platform-neutral naming
+
+### 🔧 What We Improved Behind the Scenes
+
+- Semantic naming improvements throughout the codebase
+- Conditional rendering for services without transcripts
+- Platform-agnostic template variable system
+- Enhanced error handling in the provider system
+
+---
+
 ## [1.0.0] - 2025-08-20
 
 ### 🎯 What This Means for You
