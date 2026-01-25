@@ -14,7 +14,6 @@ import {
   getAuth,
   signInWithCustomToken,
   signOut,
-  Unsubscribe,
 } from 'firebase/auth'
 import { NewLineType } from '../../shared/types'
 
@@ -50,17 +49,13 @@ export const DEFAULT_SETTINGS: LoudThoughtsSettings = {
 export class LoudThoughtsSettingTab extends PluginSettingTab {
   plugin: LoudThoughtsPlugin
   auth: Auth
-  authObserver: Unsubscribe
 
   constructor(oApp: App, plugin: LoudThoughtsPlugin) {
     super(oApp, plugin)
     this.plugin = plugin
     this.auth = getAuth(this.plugin.firebase)
-    this.authObserver = this.auth.onAuthStateChanged(this.display.bind(this))
-  }
-
-  hide(): void {
-    this.authObserver()
+    const authObserver = this.auth.onAuthStateChanged(this.display.bind(this))
+    this.register(() => authObserver())
   }
 
   async display() {
@@ -277,7 +272,7 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
       }
 
       new Setting(containerEl)
-        .setName('Debug Mode')
+        .setName('Debug mode')
         .setDesc(
           'Print debug messages to the console. This is useful for troubleshooting issues. See the console with View --> Toggle Developer Tools'
         )

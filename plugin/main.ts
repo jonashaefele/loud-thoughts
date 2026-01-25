@@ -8,7 +8,7 @@ import {
   normalizePath,
   // addIcon,
 } from 'obsidian'
-import { getAuth, Unsubscribe } from 'firebase/auth'
+import { getAuth } from 'firebase/auth'
 import { FirebaseApp } from 'firebase/app'
 import {
   DataSnapshot,
@@ -21,7 +21,7 @@ import {
 } from 'firebase/database'
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import { default as firebaseApp } from '../shared/firebase'
-import moment from 'moment'
+import { moment } from 'obsidian'
 import linksTemplate from './templates/template-links.md'
 import tagsTemplate from './templates/template-tags.md'
 import { BufferItemData, NewLineType } from '../shared/types'
@@ -36,11 +36,10 @@ export default class LoudThoughtsPlugin extends Plugin {
   settings: LoudThoughtsSettings
   firebase: FirebaseApp
   loggedIn: boolean
-  authUnsubscribe: Unsubscribe
-  valUnsubscribe: Unsubscribe
   statusBarIcon: null | HTMLElement = null // Initialize as null
   defaultTemplate: string
   syncStatus = 'offline'
+  private valUnsubscribe: (() => void) | null = null
 
   async onload() {
     await this.loadSettings()
@@ -57,9 +56,10 @@ export default class LoudThoughtsPlugin extends Plugin {
       console.error('Failed to force WebSockets:', error)
     }
 
-    this.authUnsubscribe = getAuth(this.firebase).onAuthStateChanged((user) => {
+    const authUnsubscribe = getAuth(this.firebase).onAuthStateChanged((user) => {
       if (this.valUnsubscribe) {
         this.valUnsubscribe()
+        this.valUnsubscribe = null
       }
       if (user) {
         const db = getDatabase(this.firebase)
@@ -73,6 +73,13 @@ export default class LoudThoughtsPlugin extends Plugin {
             await goOnline(db)
           }
         })
+      }
+    })
+
+    this.register(() => {
+      authUnsubscribe()
+      if (this.valUnsubscribe) {
+        this.valUnsubscribe()
       }
     })
 
@@ -323,28 +330,22 @@ export default class LoudThoughtsPlugin extends Plugin {
     }
 
     // Update existing file based on user preference (overwrite, append, or prepend)
-    const existingContent = await this.app.vault.cachedRead(existingFiles[0])
-    let updatedContent
-
-    switch (this.settings.updateMode) {
-      case 'overwrite':
-        updatedContent = newContent
-        break
-      case 'append':
-        updatedContent = `${existingContent}${this.getNewLine()}#V${
-          existingFiles.length + 1
-        }${this.getNewLine()}${content}`
-        break
-      case 'prepend':
-        updatedContent = `#V${
-          existingFiles.length + 1
-        }${this.getNewLine()}${content}${this.getNewLine()}${existingContent}`
-        break
-      default:
-        throw new Error('Invalid update mode')
-    }
-
-    await this.app.vault.process(existingFiles[0], () => updatedContent)
+    await this.app.vault.process(existingFiles[0], (existingContent) => {
+      switch (this.settings.updateMode) {
+        case 'overwrite':
+          return newContent
+        case 'append':
+          return `${existingContent}${this.getNewLine()}#V${
+            existingFiles.length + 1
+          }${this.getNewLine()}${content}`
+        case 'prepend':
+          return `#V${
+            existingFiles.length + 1
+          }${this.getNewLine()}${content}${this.getNewLine()}${existingContent}`
+        default:
+          throw new Error('Invalid update mode')
+      }
+    })
   }
 
   generateMarkdownContent = async ({
@@ -493,15 +494,6 @@ export default class LoudThoughtsPlugin extends Plugin {
       .replace(/[\\/:*?'"<>.|]/g, '') // Remove reserved characters for file names
       .slice(0, 250) // Limit the file name to 250 characters
     return normalizePath(`${folderPath}/${fileName}.md`)
-  }
-
-  onunload() {
-    if (this.authUnsubscribe) {
-      this.authUnsubscribe()
-    }
-    if (this.valUnsubscribe) {
-      this.valUnsubscribe()
-    }
   }
 
   async loadSettings() {
