@@ -9,12 +9,7 @@ import {
 import { MultiSuggest } from './MultiSuggest'
 import { withConfirm } from './button'
 import LoudThoughtsPlugin from '../main'
-import {
-  Auth,
-  getAuth,
-  signInWithCustomToken,
-  signOut,
-} from 'firebase/auth'
+import { Auth, getAuth, signInWithCustomToken, signOut } from 'firebase/auth'
 import { NewLineType } from '../../shared/types'
 
 export interface LoudThoughtsSettings {
@@ -55,7 +50,8 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
     this.plugin = plugin
     this.auth = getAuth(this.plugin.firebase)
     const authObserver = this.auth.onAuthStateChanged(this.display.bind(this))
-    this.register(() => authObserver())
+    // Use plugin.register() since PluginSettingTab doesn't extend Component
+    this.plugin.register(() => authObserver())
   }
 
   async display() {
