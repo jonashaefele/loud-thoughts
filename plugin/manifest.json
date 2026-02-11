@@ -1,7 +1,7 @@
 {
   "id": "loud-thoughts",
   "name": "LoudThoughts",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "minAppVersion": "1.6.0",
   "description": "Multi-service voice note sync with support for AudioPen, VoiceNotes, Alfie and future voice note platforms.",
   "author": "Jonas Haefele",
