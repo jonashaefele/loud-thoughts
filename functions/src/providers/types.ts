@@ -60,14 +60,28 @@ export interface VoiceNotesPayload {
 }
 
 /**
+ * Todo item from Alfie daily reviews
+ */
+export interface TodoItem {
+  label: string
+  dueDate: string | null // ISO date e.g. "2026-02-12"
+}
+
+/**
  * Alfie webhook payload
  */
 export interface AlfiePayload {
   reflection_id: string
-  user_id: string
+  user_id?: string
   content: string
   title?: string
   metadata: {
+    // Standard reflection context (flat structure)
+    mood?: 'calm' | 'anxious' | 'happy' | 'sad' | 'stressed' | 'excited' | 'overwhelmed' | 'neutral'
+    needs?: 'focus' | 'relax' | 'process' | 'motivate' | 'cope' | 'routine' | 'creative' | 'social'
+    energy?: string // "1" | "2" | "3"
+
+    // Legacy nested structure (backwards compatibility)
     timestamp?: string
     messageType?: string
     conversationContext?: {
@@ -78,6 +92,18 @@ export interface AlfiePayload {
       timeOfDay?: string
       timeAvailable?: string
     }
+
+    // Daily review specific (when type === "daily-review")
+    type?: 'daily-review' | 'chat'
+    todos?: TodoItem[]
+    captured?: {
+      bodyState?: string
+      intense?: string[]
+      reflections?: string[]
+      tomorrow?: string[]
+      letGo?: string[]
+    }
+    ritualContext?: 'wind-down' | 'process' | 'ground' | null
   }
   created_at: string
   updated_at: string

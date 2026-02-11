@@ -5772,6 +5772,31 @@ __metadata:
   languageName: node
   linkType: hard
 
+"obsidian-daily-notes-interface@npm:^0.9.4":
+  version: 0.9.4
+  resolution: "obsidian-daily-notes-interface@npm:0.9.4"
+  dependencies:
+    obsidian: "github:obsidianmd/obsidian-api#master"
+    tslib: "npm:2.1.0"
+  bin:
+    obsidian-daily-notes-interface: dist/main.js
+  checksum: 10c0/1fd8cc1f3a1c77bdb3b945ceaf1a9dc7c216a920dadb4a313c3e1babf5e9578a8fdec5ea12d0e9a2ec392ed5c24c5ce849ab87d1fbd37fb8c8146105962606a3
+  languageName: node
+  linkType: hard
+
+"obsidian@github:obsidianmd/obsidian-api#master":
+  version: 1.12.0
+  resolution: "obsidian@https://github.com/obsidianmd/obsidian-api.git#commit=43e3ecf1045a8cdff39c53d74c46f66ad081a4c3"
+  dependencies:
+    "@types/codemirror": "npm:5.60.8"
+    moment: "npm:2.29.4"
+  peerDependencies:
+    "@codemirror/state": 6.5.0
+    "@codemirror/view": 6.38.6
+  checksum: 10c0/50b2901c67cb38ad0e86ef6c70b3290e1568c4af4e5e4d60172f46cd778602225db48e7142ddf16e66938e66e88782a1cc93bb0ee62e54abaaa97c16bab4fec7
+  languageName: node
+  linkType: hard
+
 "obsidian@npm:1.5.7-1":
   version: 1.5.7-1
   resolution: "obsidian@npm:1.5.7-1"
@@ -5986,6 +6011,7 @@ __metadata:
     dotenv: "npm:^16.4.5"
     firebase: "npm:^12.2.1"
     obsidian: "npm:1.5.7-1"
+    obsidian-daily-notes-interface: "npm:^0.9.4"
     react: "npm:^18.3.1"
     react-dom: "npm:^18.3.1"
     rollup: "npm:^4.17.2"
@@ -7124,6 +7150,13 @@ __metadata:
     minimist: "npm:^1.2.6"
     strip-bom: "npm:^3.0.0"
   checksum: 10c0/5b4f301a2b7a3766a986baf8fc0e177eb80bdba6e396792ff92dc23b5bca8bb279fc96517dcaaef63a3b49bebc6c4c833653ec58155780bc906bdbcf7dda0ef5
+  languageName: node
+  linkType: hard
+
+"tslib@npm:2.1.0":
+  version: 2.1.0
+  resolution: "tslib@npm:2.1.0"
+  checksum: 10c0/e95c8fb198d0209bba917db7b0f399d1aed3c4d6408bf1e4c30deebfeffb4076dc3786500100a3b5c55a535abaaeb5e6bd1da04d0cb49d4228e5a62362cee0b2
   languageName: node
   linkType: hard
 

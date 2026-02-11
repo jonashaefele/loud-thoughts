@@ -114,7 +114,7 @@ export const wipe = onCall<WipeData>({ cors: true }, async ({ auth, data }) => {
           return (
             Object.entries(buffer)
               // @ts-ignore
-              .filter(([key, value]) => value.id !== data.id)
+              .filter(([_key, value]) => value.id !== data.id)
               .reduce((obj, [key, value]) => {
                 // @ts-ignore
                 obj[key] = value
@@ -142,7 +142,7 @@ export const wipe = onCall<WipeData>({ cors: true }, async ({ auth, data }) => {
 // V1 function:
 export const generateObsidianToken = functions
   .region('europe-west1')
-  .https.onCall((_data: any, context: functions.https.CallableContext) => {
+  .https.onCall((_data: unknown, context: functions.https.CallableContext) => {
     if (context.auth) {
       return admin.auth().createCustomToken(context.auth.uid)
     }

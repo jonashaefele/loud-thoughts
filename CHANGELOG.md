@@ -2,6 +2,43 @@
 
 All notable changes to LoudThoughts will be documented in this file.
 
+## [1.3.0] - 2026-02-11
+
+### 🎯 What This Means for You
+
+Alfie users can now have their daily reviews automatically added to their daily notes, complete with todos formatted for the Tasks plugin. The plugin respects your Periodic Notes / Daily Notes templates, so your daily notes stay consistent with your existing setup.
+
+### ✨ New Features
+
+**Alfie Daily Review Support**
+- New "Alfie" settings section for configuring how daily reviews are handled
+- Two modes for daily reviews:
+  - **Add to daily note** - Appends review content under a configurable heading (works with any heading level H1-H6)
+  - **Save as voice note** - Creates a standalone file with date prefix for easy sorting
+- Todo extraction with four format options:
+  - Plain checkboxes (`- [ ] task`)
+  - Tasks plugin emoji format (`- [ ] #task task 📅 2026-02-12`)
+  - Tasks plugin dataview format (`- [ ] #task task [due:: 2026-02-12]`)
+  - Disabled (no todos saved)
+- Configurable todo tag - automatically reads from Tasks plugin global filter if available, or use your own (e.g., `#todo`, `#task`)
+- Smart heading detection - finds your existing heading at any level and appends content within that section
+- Uses `obsidian-daily-notes-interface` to create daily notes with your configured template (no more blank daily notes!)
+
+**Improved Metadata Handling**
+- Support for both flat and nested Alfie metadata structures
+- New tags for daily reviews: `type/daily-review`, `ritual/{context}`
+
+### 🔧 What We Improved Behind the Scenes
+
+- Updated shared types with `TodoItem`, `DailyReviewCaptured`, and `AlfieMetadata` interfaces
+- ESLint config now ignores `_`-prefixed unused variables (standard convention)
+- Reorganized settings UI: Alfie section now appears before Advanced
+- AlfieProvider updated to handle new payload structure with backwards compatibility
+- BaseProvider methods now use proper TypeScript types instead of `any`
+- Better type safety throughout the codebase
+
+---
+
 ## [1.2.3] - 2025-12-08
 
 ### 🎯 What This Means for You

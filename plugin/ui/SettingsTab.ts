@@ -12,6 +12,9 @@ import LoudThoughtsPlugin from '../main'
 import { Auth, getAuth, signInWithCustomToken, signOut } from 'firebase/auth'
 import { NewLineType } from '../../shared/types'
 
+export type AlfieDailyReviewMode = 'disabled' | 'daily-note' | 'voice-note'
+export type AlfieTodoFormat = 'disabled' | 'plain' | 'tasks-emoji' | 'tasks-dataview'
+
 export interface LoudThoughtsSettings {
   debug: boolean
   token: string
@@ -25,6 +28,11 @@ export interface LoudThoughtsSettings {
   folderPath: string
   updateMode?: 'overwrite' | 'append' | 'prepend' | 'new'
   useCustomTemplate: boolean
+  // Alfie Daily Review settings
+  alfieDailyReviewMode: AlfieDailyReviewMode
+  alfieDailyReviewHeading: string
+  alfieTodoFormat: AlfieTodoFormat
+  alfieTodoTag: string // Tag for Tasks plugin formats, empty to disable
 }
 
 export const DEFAULT_SETTINGS: LoudThoughtsSettings = {
@@ -39,6 +47,11 @@ export const DEFAULT_SETTINGS: LoudThoughtsSettings = {
   updateMode: 'new',
   useCustomTemplate: false,
   debug: false,
+  // Alfie Daily Review defaults
+  alfieDailyReviewMode: 'disabled',
+  alfieDailyReviewHeading: 'Alfie Daily Review',
+  alfieTodoFormat: 'disabled',
+  alfieTodoTag: '', // Empty = prefill from Tasks plugin, or user sets their own
 }
 
 export class LoudThoughtsSettingTab extends PluginSettingTab {
@@ -210,6 +223,102 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
         }
       }
 
+      // Alfie Daily Review Settings
+      new Setting(containerEl).setName('Alfie').setHeading()
+      containerEl.createEl('p', {
+        text: 'Configure how Alfie daily reviews are handled. Daily reviews include structured reflection content and optional todos.',
+      })
+
+      new Setting(containerEl)
+        .setName('Daily review mode')
+        .setDesc(
+          'How to handle Alfie daily reviews. Add to daily note appends under a heading. Save as voice note creates a separate file.'
+        )
+        .addDropdown((dropdown) => {
+          dropdown
+            .addOption('disabled', 'Disabled')
+            .addOption('daily-note', 'Add to daily note')
+            .addOption('voice-note', 'Save as voice note')
+            .setValue(this.plugin.settings.alfieDailyReviewMode)
+            .onChange(async (value) => {
+              this.plugin.settings.alfieDailyReviewMode =
+                value as AlfieDailyReviewMode
+              await this.plugin.saveSettings()
+              this.display()
+            })
+        })
+
+      if (this.plugin.settings.alfieDailyReviewMode === 'daily-note') {
+        new Setting(containerEl)
+          .setName('Daily review heading')
+          .setDesc(
+            'The H2 heading under which daily reviews will be added in your daily note'
+          )
+          .addText((text) => {
+            text
+              .setPlaceholder('Alfie Daily Review')
+              .setValue(this.plugin.settings.alfieDailyReviewHeading)
+              .onChange(async (value) => {
+                this.plugin.settings.alfieDailyReviewHeading =
+                  value || 'Alfie Daily Review'
+                await this.plugin.saveSettings()
+              })
+          })
+      }
+
+      new Setting(containerEl)
+        .setName('Todo format')
+        .setDesc(
+          'How to format todos from daily reviews. Tasks plugin formats include a tag and due dates.'
+        )
+        .addDropdown((dropdown) => {
+          dropdown
+            .addOption('disabled', "No (don't save todos)")
+            .addOption('plain', 'Plain checkboxes')
+            .addOption('tasks-emoji', 'Tasks plugin (emoji format)')
+            .addOption('tasks-dataview', 'Tasks plugin (dataview format)')
+            .setValue(this.plugin.settings.alfieTodoFormat)
+            .onChange(async (value) => {
+              this.plugin.settings.alfieTodoFormat = value as AlfieTodoFormat
+              await this.plugin.saveSettings()
+              this.display()
+            })
+        })
+
+      if (
+        this.plugin.settings.alfieTodoFormat === 'tasks-emoji' ||
+        this.plugin.settings.alfieTodoFormat === 'tasks-dataview'
+      ) {
+        // Try to prefill from Tasks plugin global filter if not set
+        // @ts-ignore - plugins API not in types
+        const tasksPlugin = this.app.plugins.plugins['obsidian-tasks-plugin']
+        const tasksGlobalFilter = tasksPlugin?.settings?.globalFilter
+        if (tasksGlobalFilter && !this.plugin.settings.alfieTodoTag) {
+          // Prefill with Tasks plugin global filter
+          this.plugin.settings.alfieTodoTag = tasksGlobalFilter
+          this.plugin.saveSettings()
+        }
+
+        new Setting(containerEl)
+          .setName('Todo tag')
+          .setDesc(
+            'Tag prefix for todos (e.g., #task, #to/do). Leave empty for no tag.' +
+              (tasksGlobalFilter
+                ? ` Detected from Tasks plugin: ${tasksGlobalFilter}`
+                : '')
+          )
+          .addText((text) => {
+            text
+              .setPlaceholder('#task')
+              .setValue(this.plugin.settings.alfieTodoTag)
+              .onChange(async (value) => {
+                this.plugin.settings.alfieTodoTag = value
+                await this.plugin.saveSettings()
+              })
+          })
+      }
+
+      // Advanced Settings
       new Setting(containerEl).setName('Advanced').setHeading()
       containerEl.createEl('p', {
         text: 'You can use custom templates to render your notes and make them yours. If you break the template, you may lose data from the buffer.',

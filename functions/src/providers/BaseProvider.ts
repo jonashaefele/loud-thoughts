@@ -37,34 +37,41 @@ export abstract class BaseProvider implements Provider {
   /**
    * Safely get a string value from an object
    */
-  protected getString(obj: any, path: string, defaultValue = ''): string {
+  protected getString(obj: Record<string, unknown>, path: string, defaultValue = ''): string {
     const keys = path.split('.')
-    let result = obj
-    
+    let result: unknown = obj
+
     for (const key of keys) {
-      result = result?.[key]
-      if (result === undefined) return defaultValue
+      if (result && typeof result === 'object' && key in result) {
+        result = (result as Record<string, unknown>)[key]
+      } else {
+        return defaultValue
+      }
     }
-    
+
     return String(result || defaultValue)
   }
-  
+
   /**
    * Check if an object has all required fields
    */
-  protected hasRequiredFields(obj: any, fields: string[]): boolean {
+  protected hasRequiredFields(obj: unknown, fields: string[]): boolean {
     if (!obj || typeof obj !== 'object') return false
-    
+
     for (const field of fields) {
       const keys = field.split('.')
-      let current = obj
-      
+      let current: unknown = obj
+
       for (const key of keys) {
-        current = current?.[key]
-        if (current === undefined || current === null) return false
+        if (current && typeof current === 'object' && key in current) {
+          current = (current as Record<string, unknown>)[key]
+        } else {
+          return false
+        }
       }
+      if (current === undefined || current === null) return false
     }
-    
+
     return true
   }
 }

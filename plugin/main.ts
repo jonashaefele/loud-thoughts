@@ -24,7 +24,17 @@ import { default as firebaseApp } from '../shared/firebase'
 import { moment } from 'obsidian'
 import linksTemplate from './templates/template-links.md'
 import tagsTemplate from './templates/template-tags.md'
-import { BufferItemData, NewLineType } from '../shared/types'
+import {
+  BufferItemData,
+  NewLineType,
+  AlfieMetadata,
+  TodoItem,
+} from '../shared/types'
+import {
+  createDailyNote,
+  getDailyNote,
+  getAllDailyNotes,
+} from 'obsidian-daily-notes-interface'
 
 import {
   LoudThoughtsSettings,
@@ -56,25 +66,27 @@ export default class LoudThoughtsPlugin extends Plugin {
       console.error('Failed to force WebSockets:', error)
     }
 
-    const authUnsubscribe = getAuth(this.firebase).onAuthStateChanged((user) => {
-      if (this.valUnsubscribe) {
-        this.valUnsubscribe()
-        this.valUnsubscribe = null
+    const authUnsubscribe = getAuth(this.firebase).onAuthStateChanged(
+      (user) => {
+        if (this.valUnsubscribe) {
+          this.valUnsubscribe()
+          this.valUnsubscribe = null
+        }
+        if (user) {
+          const db = getDatabase(this.firebase)
+          const buffer = ref(db, `buffer/${user.uid}`)
+          this.syncStatus = 'ok'
+          this.valUnsubscribe = onValue(buffer, async (data) => {
+            try {
+              await goOffline(db)
+              await this.onBufferChange(data)
+            } finally {
+              await goOnline(db)
+            }
+          })
+        }
       }
-      if (user) {
-        const db = getDatabase(this.firebase)
-        const buffer = ref(db, `buffer/${user.uid}`)
-        this.syncStatus = 'ok'
-        this.valUnsubscribe = onValue(buffer, async (data) => {
-          try {
-            await goOffline(db)
-            await this.onBufferChange(data)
-          } finally {
-            await goOnline(db)
-          }
-        })
-      }
-    })
+    )
 
     this.register(() => {
       authUnsubscribe()
@@ -267,6 +279,26 @@ export default class LoudThoughtsPlugin extends Plugin {
     platform = 'audiopen',
     metadata,
   }: BufferItemData) => {
+    // Check if this is an Alfie daily review that needs special handling
+    const alfieMetadata = metadata as AlfieMetadata | undefined
+    const isDailyReview =
+      platform === 'alfie' && alfieMetadata?.type === 'daily-review'
+
+    if (isDailyReview && this.settings.alfieDailyReviewMode !== 'disabled') {
+      await this.handleDailyReview({
+        content,
+        orig_transcript,
+        title,
+        tags,
+        id,
+        date_created,
+        timestamp,
+        platform,
+        metadata,
+      })
+      return
+    }
+
     // audiopen changed it's date format, so we need to parse it
     const parsedDate =
       platform === 'audiopen'
@@ -415,19 +447,13 @@ export default class LoudThoughtsPlugin extends Plugin {
     if (this.settings.debug)
       console.log(content, orig_transcript, title, tags, id, timestamp)
 
-    // Extract Alfie-specific metadata if available
-    interface AlfieMetadata {
-      conversationContext?: {
-        mood?: string
-        needs?: string
-        energy?: number
-        location?: string
-        timeOfDay?: string
-        timeAvailable?: string
-      }
-    }
+    // Extract Alfie-specific metadata if available (supports both flat and nested structures)
     const alfieMetadata = (metadata || {}) as AlfieMetadata
     const context = alfieMetadata.conversationContext || {}
+    // Support flat structure (new) with fallback to nested (legacy)
+    const mood = alfieMetadata.mood || context.mood || ''
+    const needs = alfieMetadata.needs || context.needs || ''
+    const energy = alfieMetadata.energy || context.energy?.toString() || ''
 
     let processedTemplate = markdownTemplate
       .replace(/{title}/g, title)
@@ -443,10 +469,10 @@ export default class LoudThoughtsPlugin extends Plugin {
       .replace(/{tagsAsLinks}/g, tagsAsLinks)
       .replace(/{tagsAsTags}/g, tagsAsTags)
       .replace(/{platform}/g, platform)
-      // Alfie-specific template variables
-      .replace(/{mood}/g, context.mood || '')
-      .replace(/{needs}/g, context.needs || '')
-      .replace(/{energy}/g, context.energy?.toString() || '')
+      // Alfie-specific template variables (supports flat and nested structures)
+      .replace(/{mood}/g, mood)
+      .replace(/{needs}/g, needs)
+      .replace(/{energy}/g, energy)
       .replace(/{location}/g, context.location || '')
       .replace(/{timeOfDay}/g, context.timeOfDay || '')
       .replace(/{timeAvailable}/g, context.timeAvailable || '')
@@ -466,6 +492,284 @@ export default class LoudThoughtsPlugin extends Plugin {
     }
 
     return processedTemplate
+  }
+
+  /**
+   * Handle Alfie daily reviews with special processing
+   */
+  handleDailyReview = async (payload: BufferItemData) => {
+    const alfieMetadata = payload.metadata as AlfieMetadata
+    const todos = alfieMetadata?.todos || []
+
+    if (this.settings.debug) {
+      console.log('Handling daily review:', payload.title)
+      console.log('Todos:', todos)
+    }
+
+    if (this.settings.alfieDailyReviewMode === 'daily-note') {
+      await this.appendToDailyNote(payload, todos)
+    } else if (this.settings.alfieDailyReviewMode === 'voice-note') {
+      // Save as voice note with date prefix and todos appended
+      const datePrefix = moment(
+        payload.timestamp || payload.date_created
+      ).format('YYYY-MM-DD')
+      const todoContent = this.formatTodos(todos)
+
+      // Modify content to include todos if present
+      const contentWithTodos = todoContent
+        ? `${payload.content}\n\n### For tomorrow\n${todoContent}`
+        : payload.content
+
+      // Create a modified payload with updated title and content
+      const modifiedPayload: BufferItemData = {
+        ...payload,
+        title: `${datePrefix} ${payload.title}`,
+        content: contentWithTodos,
+      }
+
+      // Use existing voice note logic (call parent logic directly)
+      await this.applyEventAsVoiceNote(modifiedPayload)
+    }
+  }
+
+  /**
+   * Apply event as a regular voice note (extracted from applyEvent for reuse)
+   */
+  applyEventAsVoiceNote = async ({
+    content = '',
+    orig_transcript,
+    title = '',
+    tags = [],
+    id = '',
+    date_created = '',
+    timestamp = '',
+    platform = 'audiopen',
+    metadata,
+  }: BufferItemData) => {
+    const parsedDate =
+      platform === 'audiopen'
+        ? moment(date_created, 'DD/MM/YYYY').format()
+        : timestamp
+
+    let newContent = await this.generateMarkdownContent({
+      content: content.replace(/\<br\/\>/g, '\n'),
+      orig_transcript,
+      title,
+      tags,
+      id,
+      platform,
+      timestamp: parsedDate,
+      metadata,
+    })
+
+    const existingFiles = this.app.vault.getMarkdownFiles().filter((file) => {
+      const frontmatter = this.app.metadataCache.getCache(
+        file.path
+      )?.frontmatter
+      return (
+        frontmatter && frontmatter.audioPenID?.toString() === id?.toString()
+      )
+    })
+
+    if (existingFiles.length === 0) {
+      let filePath = this.generateFilePath(title)
+      try {
+        await this.app.vault.create(filePath, newContent)
+      } catch (error) {
+        console.error('Error creating new note, adding date to filename', error)
+        filePath = this.generateFilePath(
+          `${title}-${moment(parsedDate).format('YYYY-MM-DD')}`
+        )
+        await this.app.vault.create(filePath, newContent)
+      }
+      return
+    }
+
+    if (this.settings.updateMode === 'new') {
+      const filePath = this.generateFilePath(
+        `${title} V${existingFiles.length + 1}`
+      )
+      await this.app.vault.create(filePath, newContent)
+      return
+    }
+
+    await this.app.vault.process(existingFiles[0], (existingContent) => {
+      switch (this.settings.updateMode) {
+        case 'overwrite':
+          return newContent
+        case 'append':
+          return `${existingContent}${this.getNewLine()}#V${
+            existingFiles.length + 1
+          }${this.getNewLine()}${content}`
+        case 'prepend':
+          return `#V${
+            existingFiles.length + 1
+          }${this.getNewLine()}${content}${this.getNewLine()}${existingContent}`
+        default:
+          throw new Error('Invalid update mode')
+      }
+    })
+  }
+
+  /**
+   * Format todos according to user settings
+   */
+  formatTodos = (todos: TodoItem[]): string => {
+    if (!todos?.length || this.settings.alfieTodoFormat === 'disabled') {
+      return ''
+    }
+
+    const tag = this.settings.alfieTodoTag || ''
+    const tagPrefix = tag ? `${tag} ` : ''
+
+    return todos
+      .map((todo) => {
+        const label = todo.label
+        const dueDate = todo.dueDate
+
+        switch (this.settings.alfieTodoFormat) {
+          case 'plain':
+            return `- [ ] ${label}`
+          case 'tasks-emoji':
+            return dueDate
+              ? `- [ ] ${tagPrefix}${label} 📅 ${dueDate}`
+              : `- [ ] ${tagPrefix}${label}`
+          case 'tasks-dataview':
+            return dueDate
+              ? `- [ ] ${tagPrefix}${label} [due:: ${dueDate}]`
+              : `- [ ] ${tagPrefix}${label}`
+          default:
+            return `- [ ] ${label}`
+        }
+      })
+      .join('\n')
+  }
+
+  /**
+   * Append daily review content to the daily note
+   */
+  appendToDailyNote = async (payload: BufferItemData, todos: TodoItem[]) => {
+    const heading =
+      this.settings.alfieDailyReviewHeading || 'Alfie Daily Review'
+    const todoContent = this.formatTodos(todos)
+
+    // Build the content to append (without heading for existing sections)
+    const appendContent = todoContent
+      ? `${payload.content}\n\n### For tomorrow\n${todoContent}`
+      : payload.content
+
+    // Build the full content block with heading (for new sections)
+    const contentBlock = `## ${heading}\n\n${appendContent}`
+
+    // Get or create today's daily note using the daily notes interface
+    // This respects Periodic Notes / Daily Notes plugin settings and templates
+    let file = getDailyNote(moment(), getAllDailyNotes())
+
+    if (!file) {
+      // Daily note doesn't exist - create it using the plugin API (applies user's template)
+      try {
+        if (this.settings.debug) console.log('Creating daily note with template...')
+        file = await createDailyNote(moment())
+        if (this.settings.debug) console.log('Created daily note:', file.path)
+      } catch (error) {
+        console.error('Error creating daily note:', error)
+        new Notice(`Error creating daily note: ${error.message}`)
+        return
+      }
+    }
+
+    if (this.settings.debug) {
+      console.log('Daily note path:', file.path)
+      console.log('Content block:', contentBlock)
+    }
+
+    // Daily note exists, append under heading or add heading
+    await this.app.vault.process(file, (existingContent) => {
+      // Match any heading level (H1-H6) with the configured heading text
+      const headingRegex = new RegExp(
+        `^(#{1,6})\\s+${this.escapeRegex(heading)}\\s*$`,
+        'm'
+      )
+      const headingMatch = existingContent.match(headingRegex)
+
+      if (headingMatch) {
+        // Heading exists - find the heading level and insert before next same-or-higher level heading
+        const headingLevel = headingMatch[1].length // Number of # characters
+        const headingIndex = headingMatch.index!
+        const afterHeading = existingContent.substring(headingIndex)
+
+        // Find next heading of same or higher level (fewer or equal # characters)
+        // e.g., if current is ###, find next #, ##, or ###
+        const nextHeadingRegex = new RegExp(
+          `\\n#{1,${headingLevel}}\\s+[^\\n]+`,
+          'g'
+        )
+        const nextHeadingMatches = afterHeading.match(nextHeadingRegex)
+
+        if (nextHeadingMatches && nextHeadingMatches.length > 0) {
+          // There's another heading at same or higher level, insert before it
+          const nextHeadingIndex = afterHeading.indexOf(nextHeadingMatches[0])
+          const insertPoint = headingIndex + nextHeadingIndex
+          const newReviewContent = `\n\n${appendContent}\n`
+          return (
+            existingContent.substring(0, insertPoint) +
+            newReviewContent +
+            existingContent.substring(insertPoint)
+          )
+        } else {
+          // No more headings at this level, append at end of file
+          const newReviewContent = `\n\n${appendContent}`
+          return existingContent + newReviewContent
+        }
+      } else {
+        // Heading doesn't exist, append new H2 section at end
+        return existingContent + '\n\n' + contentBlock
+      }
+    })
+
+    if (this.settings.debug) console.log('Appended review to daily note')
+  }
+
+  /**
+   * Get the path to today's daily note based on user's settings
+   */
+  getDailyNotePath = (): string => {
+    // @ts-ignore - plugins API not in types
+    const periodicNotesPlugin = this.app.plugins.getPlugin('periodic-notes')
+    // @ts-ignore
+    const dailyNotesPlugin = this.app.plugins.getPlugin('daily-notes')
+
+    let dailyNoteFormat = 'YYYY-MM-DD'
+    let dailyNoteFolder = ''
+
+    if (periodicNotesPlugin?.settings?.daily) {
+      dailyNoteFormat =
+        periodicNotesPlugin.settings.daily.format || dailyNoteFormat
+      dailyNoteFolder = periodicNotesPlugin.settings.daily.folder || ''
+    } else if (dailyNotesPlugin?.settings) {
+      dailyNoteFormat = dailyNotesPlugin.settings.format || dailyNoteFormat
+      dailyNoteFolder = dailyNotesPlugin.settings.folder || ''
+    }
+
+    const todayFormatted = moment().format(dailyNoteFormat)
+    const path = dailyNoteFolder
+      ? normalizePath(`${dailyNoteFolder}/${todayFormatted}.md`)
+      : normalizePath(`${todayFormatted}.md`)
+
+    if (this.settings.debug) {
+      console.log('Daily note format:', dailyNoteFormat)
+      console.log('Daily note folder:', dailyNoteFolder)
+      console.log('Daily note path:', path)
+    }
+
+    return path
+  }
+
+  /**
+   * Escape special regex characters in a string
+   */
+  escapeRegex = (str: string): string => {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   }
 
   getNewLine(): string {
