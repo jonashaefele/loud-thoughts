@@ -95,6 +95,7 @@ export interface AlfiePayload {
 
     // Daily review specific (when type === "daily-review")
     type?: 'daily-review' | 'chat'
+    oneLiner?: string // Summary of the day
     todos?: TodoItem[]
     captured?: {
       bodyState?: string

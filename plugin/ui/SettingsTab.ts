@@ -33,6 +33,7 @@ export interface LoudThoughtsSettings {
   alfieDailyReviewHeading: string
   alfieTodoFormat: AlfieTodoFormat
   alfieTodoTag: string // Tag for Tasks plugin formats, empty to disable
+  alfieAddOneLinerAsAlias: boolean // Add one-liner summary as alias in frontmatter
 }
 
 export const DEFAULT_SETTINGS: LoudThoughtsSettings = {
@@ -52,6 +53,7 @@ export const DEFAULT_SETTINGS: LoudThoughtsSettings = {
   alfieDailyReviewHeading: 'Alfie Daily Review',
   alfieTodoFormat: 'disabled',
   alfieTodoTag: '', // Empty = prefill from Tasks plugin, or user sets their own
+  alfieAddOneLinerAsAlias: false,
 }
 
 export class LoudThoughtsSettingTab extends PluginSettingTab {
@@ -316,6 +318,22 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
                 await this.plugin.saveSettings()
               })
           })
+      }
+
+      if (this.plugin.settings.alfieDailyReviewMode === 'daily-note') {
+        new Setting(containerEl)
+          .setName('Add one-liner as alias')
+          .setDesc(
+            'When daily review includes a one-liner summary, add it as an alias in the daily note frontmatter'
+          )
+          .addToggle((toggle) =>
+            toggle
+              .setValue(this.plugin.settings.alfieAddOneLinerAsAlias)
+              .onChange(async (value) => {
+                this.plugin.settings.alfieAddOneLinerAsAlias = value
+                await this.plugin.saveSettings()
+              })
+          )
       }
 
       // Advanced Settings

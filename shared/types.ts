@@ -38,6 +38,7 @@ export interface AlfieMetadata {
 
   // Daily review specific (when type === "daily-review")
   type?: 'daily-review' | 'chat'
+  oneLiner?: string // Summary of the day, e.g., "I met Emma in person for the first time"
   todos?: TodoItem[]
   captured?: DailyReviewCaptured
   ritualContext?: 'wind-down' | 'process' | 'ground' | null
