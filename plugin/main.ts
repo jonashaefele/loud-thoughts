@@ -642,14 +642,24 @@ export default class LoudThoughtsPlugin extends Plugin {
     // Build the full content block with heading (for new sections)
     const contentBlock = `## ${heading}\n\n${appendContent}`
 
-    // Get or create today's daily note using the daily notes interface
+    // Determine target date: use reflectionDate from payload, fallback to today
+    const alfieMetadata = payload.metadata as AlfieMetadata
+    const targetDate = alfieMetadata?.reflectionDate
+      ? moment(alfieMetadata.reflectionDate, 'YYYY-MM-DD')
+      : moment()
+
+    if (this.settings.debug && alfieMetadata?.reflectionDate) {
+      console.log(`[LoudThoughts] Using reflectionDate: ${alfieMetadata.reflectionDate}`)
+    }
+
+    // Get or create the daily note for the target date using the daily notes interface
     // This respects Periodic Notes / Daily Notes plugin settings and templates
-    let file = getDailyNote(moment(), getAllDailyNotes())
+    let file = getDailyNote(targetDate, getAllDailyNotes())
 
     if (!file) {
       // Daily note doesn't exist - create it using the plugin API (applies user's template)
       try {
-        file = await createDailyNote(moment())
+        file = await createDailyNote(targetDate)
         if (this.settings.debug) console.log(`[LoudThoughts] Created daily note: ${file.path}`)
       } catch (error) {
         console.error('[LoudThoughts] Error creating daily note:', error)
@@ -707,7 +717,6 @@ export default class LoudThoughtsPlugin extends Plugin {
     })
 
     // Add one-liner as alias if enabled
-    const alfieMetadata = payload.metadata as AlfieMetadata
     const oneLiner = alfieMetadata?.oneLiner
     if (this.settings.alfieAddOneLinerAsAlias && oneLiner) {
       await this.addAliasToFrontmatter(file, oneLiner)

@@ -38,6 +38,7 @@ export interface AlfieMetadata {
 
   // Daily review specific (when type === "daily-review")
   type?: 'daily-review' | 'chat'
+  reflectionDate?: string // YYYY-MM-DD in user's local timezone, for saving to correct daily note
   oneLiner?: string // Summary of the day, e.g., "I met Emma in person for the first time"
   todos?: TodoItem[]
   captured?: DailyReviewCaptured
