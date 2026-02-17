@@ -1,7 +1,7 @@
 import { ButtonComponent } from 'obsidian'
 
-export function withConfirm(callback: (btn: ButtonComponent) => any) {
-  let onClickHandler: (evt?: MouseEvent) => any = void 0
+export function withConfirm(callback: (btn: ButtonComponent) => void) {
+  let onClickHandler: ((evt?: MouseEvent) => void) | undefined = undefined
   let resetButtonClicked = false
   return (btn: ButtonComponent) => {
     btn.setWarning().onClick(() => {
@@ -10,11 +10,11 @@ export function withConfirm(callback: (btn: ButtonComponent) => any) {
         btn.setButtonText('Confirm')
         return
       }
-      if (onClickHandler != void 0) {
+      if (onClickHandler !== undefined) {
         onClickHandler()
       }
     })
-    btn.onClick = (handler: (evt: MouseEvent) => any) => {
+    btn.onClick = (handler: (evt: MouseEvent) => void) => {
       onClickHandler = handler
       return btn
     }

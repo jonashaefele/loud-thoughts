@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import {
   App,
   PluginSettingTab,
@@ -9,14 +8,13 @@ import {
 import { MultiSuggest } from './MultiSuggest'
 import { withConfirm } from './button'
 import LoudThoughtsPlugin from '../main'
-import { Auth, getAuth, signInWithCustomToken, signOut } from 'firebase/auth'
-import { NewLineType } from '../../shared/types'
+import { Auth, getAuth, signInWithCustomToken, signOut, User } from 'firebase/auth'
 
 export type AlfieDailyReviewMode = 'disabled' | 'daily-note' | 'voice-note'
 export type AlfieTodoFormat = 'disabled' | 'plain' | 'tasks-emoji' | 'tasks-dataview'
+export type NewLineType = 'windows' | 'unixMac'
 
 export interface LoudThoughtsSettings {
-  debug: boolean
   token: string
   frequency: string
   triggerOnLoad: boolean
@@ -47,7 +45,6 @@ export const DEFAULT_SETTINGS: LoudThoughtsSettings = {
   folderPath: '',
   updateMode: 'new',
   useCustomTemplate: false,
-  debug: false,
   // Alfie Daily Review defaults
   alfieDailyReviewMode: 'disabled',
   alfieDailyReviewHeading: 'Alfie Daily Review',
@@ -64,7 +61,9 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
     super(oApp, plugin)
     this.plugin = plugin
     this.auth = getAuth(this.plugin.firebase)
-    const authObserver = this.auth.onAuthStateChanged(this.display.bind(this))
+    const authObserver = this.auth.onAuthStateChanged((_user: User | null) => {
+      void this.display()
+    })
     // Use plugin.register() since PluginSettingTab doesn't extend Component
     this.plugin.register(() => authObserver())
   }
@@ -74,7 +73,7 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
       return
     }
 
-    this.plugin.loadSettings()
+    await this.plugin.loadSettings()
 
     let { containerEl } = this
 
@@ -106,10 +105,10 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
                 await signOut(this.auth)
                 this.plugin.settings.error = undefined
               } catch (err) {
-                this.plugin.settings.error = err.message
+                this.plugin.settings.error = (err as Error).message
               } finally {
                 await this.plugin.saveSettings()
-                this.display()
+                void this.display()
               }
             })
         })
@@ -124,10 +123,9 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
             const folderOptions = this.getFolderOptions(rootFolder)
             return new Set(folderOptions)
           }
-          const onSelectCb = async (value: string) => {
+          const onSelectCb = (value: string): void => {
             this.plugin.settings.folderPath = value
-            await this.plugin.saveSettings()
-            this.display()
+            void this.plugin.saveSettings().then(() => this.display())
           }
           const multiSuggest = new MultiSuggest(
             inputEl,
@@ -153,10 +151,9 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
             .addOption('new', 'Always create a new file')
             .setValue(this.plugin.settings.updateMode || 'new')
             .onChange(async (value) => {
-              // @ts-ignore
-              this.plugin.settings.updateMode = value
+              this.plugin.settings.updateMode = value as 'overwrite' | 'append' | 'prepend' | 'new'
               await this.plugin.saveSettings()
-              this.display()
+              void this.display()
             })
         })
 
@@ -186,7 +183,7 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
               this.plugin.settings.newLineType = 'unixMac'
             }
             await this.plugin.saveSettings()
-            this.display()
+            void this.display()
           })
         })
 
@@ -196,13 +193,13 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
           .setDesc('How should we render AudioPen tags?')
           .addDropdown((dropdown) => {
             dropdown
-              .addOption('links', '[[Links]] to notes')
+              .addOption('links', '[[links]] to notes')
               .addOption('tags', 'Simple #tags')
               .setValue(this.plugin.settings.tagsAsLinks ? 'links' : 'tags')
               .onChange(async (value) => {
                 this.plugin.settings.tagsAsLinks = value === 'links'
                 await this.plugin.saveSettings()
-                this.display()
+                void this.display()
               })
           })
 
@@ -210,16 +207,15 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
           new Setting(containerEl)
             .setName('Link property')
             .setDesc(
-              "Frontmatter property for tags as links (e.g., 'x', 'links')"
+              "Property name for tags as links (e.g., 'x', 'links')"
             )
             .addText((text) => {
               text
-                .setPlaceholder('x')
+                .setPlaceholder('Enter property name')
                 .setValue(this.plugin.settings.linkProperty || 'x')
                 .onChange(async (value) => {
                   this.plugin.settings.linkProperty = value
                   await this.plugin.saveSettings()
-                  this.display()
                 })
             })
         }
@@ -246,7 +242,7 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
               this.plugin.settings.alfieDailyReviewMode =
                 value as AlfieDailyReviewMode
               await this.plugin.saveSettings()
-              this.display()
+              void this.display()
             })
         })
 
@@ -258,7 +254,7 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
           )
           .addText((text) => {
             text
-              .setPlaceholder('Alfie Daily Review')
+              .setPlaceholder('Alfie daily review')
               .setValue(this.plugin.settings.alfieDailyReviewHeading)
               .onChange(async (value) => {
                 this.plugin.settings.alfieDailyReviewHeading =
@@ -283,7 +279,7 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
             .onChange(async (value) => {
               this.plugin.settings.alfieTodoFormat = value as AlfieTodoFormat
               await this.plugin.saveSettings()
-              this.display()
+              void this.display()
             })
         })
 
@@ -292,13 +288,13 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
         this.plugin.settings.alfieTodoFormat === 'tasks-dataview'
       ) {
         // Try to prefill from Tasks plugin global filter if not set
-        // @ts-ignore - plugins API not in types
-        const tasksPlugin = this.app.plugins.plugins['obsidian-tasks-plugin']
+         
+        const tasksPlugin = (this.app as unknown as { plugins: { plugins: Record<string, unknown> } }).plugins.plugins['obsidian-tasks-plugin'] as { settings?: { globalFilter?: string } } | undefined
         const tasksGlobalFilter = tasksPlugin?.settings?.globalFilter
         if (tasksGlobalFilter && !this.plugin.settings.alfieTodoTag) {
           // Prefill with Tasks plugin global filter
           this.plugin.settings.alfieTodoTag = tasksGlobalFilter
-          this.plugin.saveSettings()
+          void this.plugin.saveSettings()
         }
 
         new Setting(containerEl)
@@ -353,7 +349,7 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
             .onChange(async (value) => {
               this.plugin.settings.useCustomTemplate = value
               await this.plugin.saveSettings()
-              this.display()
+              void this.display()
             })
         )
 
@@ -377,10 +373,9 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
               const markdownFiles = this.app.vault.getMarkdownFiles()
               return new Set(markdownFiles.map((file) => file.path))
             }
-            const onSelectCb = async (value: string) => {
+            const onSelectCb = (value: string): void => {
               this.plugin.settings.markdownTemplate = value
-              await this.plugin.saveSettings()
-              this.display()
+              void this.plugin.saveSettings().then(() => this.display())
             }
             const multiSuggest = new MultiSuggest(
               inputEl,
@@ -393,21 +388,6 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
             inputEl.value = this.plugin.settings.markdownTemplate || ''
           })
       }
-
-      new Setting(containerEl)
-        .setName('Debug mode')
-        .setDesc(
-          'Print debug messages to the console. This is useful for troubleshooting issues. See the console with View --> Toggle Developer Tools'
-        )
-        .addToggle((toggle) =>
-          toggle
-            .setValue(this.plugin.settings.debug)
-            .onChange(async (value) => {
-              this.plugin.settings.debug = value
-              await this.plugin.saveSettings()
-              this.display()
-            })
-        )
 
       new Setting(containerEl).setName('Danger zone').setHeading()
       new Setting(containerEl)
@@ -422,10 +402,10 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
                   await signOut(this.auth)
                   this.plugin.settings = DEFAULT_SETTINGS
                 } catch (err) {
-                  this.plugin.settings.error = err.message
+                  this.plugin.settings.error = (err as Error).message
                 } finally {
                   await this.plugin.saveSettings()
-                  this.display()
+                  void this.display()
                 }
               })
           })
@@ -466,10 +446,10 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
                 this.plugin.settings.token = ''
                 this.plugin.settings.error = undefined
               } catch (err) {
-                this.plugin.settings.error = err.message
+                this.plugin.settings.error = (err as Error).message
               } finally {
                 await this.plugin.saveSettings()
-                this.display()
+                void this.display()
               }
             })
         })
@@ -496,7 +476,7 @@ export class LoudThoughtsSettingTab extends PluginSettingTab {
     donateKoFi.controlEl.appendChild(kofi)
 
     const donateGH = new Setting(this.containerEl)
-      .setName('Become a Github Sponsor')
+      .setName('Become a GitHub sponsor')
       .setDesc('For the fellow developers out there. Thank you!')
 
     const ghSponsor = document.createElement('iframe')

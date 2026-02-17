@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import {
   Notice,
   Menu,
@@ -26,7 +25,6 @@ import linksTemplate from './templates/template-links.md'
 import tagsTemplate from './templates/template-tags.md'
 import {
   BufferItemData,
-  NewLineType,
   AlfieMetadata,
   TodoItem,
 } from '../shared/types'
@@ -51,16 +49,22 @@ export default class LoudThoughtsPlugin extends Plugin {
   syncStatus = 'offline'
   private valUnsubscribe: (() => void) | null = null
 
-  async onload() {
+  onload() {
+    this.initializePlugin().catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      new Notice(`LoudThoughts failed to initialize: ${message}`)
+    })
+  }
+
+  private async initializePlugin() {
     await this.loadSettings()
-    if (this.settings.debug) console.log('[LoudThoughts] Plugin loaded')
     this.firebase = firebaseApp
 
     // Force WebSockets to avoid iframe issues in Obsidian
     try {
       forceWebSockets()
-    } catch (error) {
-      console.error('Failed to force WebSockets:', error)
+    } catch {
+      // WebSocket forcing failed, continue with default transport
     }
 
     const authUnsubscribe = getAuth(this.firebase).onAuthStateChanged(
@@ -73,13 +77,12 @@ export default class LoudThoughtsPlugin extends Plugin {
           const db = getDatabase(this.firebase)
           const buffer = ref(db, `buffer/${user.uid}`)
           this.syncStatus = 'ok'
-          this.valUnsubscribe = onValue(buffer, async (data) => {
-            try {
-              await goOffline(db)
-              await this.onBufferChange(data)
-            } finally {
-              await goOnline(db)
-            }
+          this.valUnsubscribe = onValue(buffer, (data) => {
+            goOffline(db)
+            void this.onBufferChange(data)
+              .finally(() => {
+                goOnline(db)
+              })
           })
         }
       }
@@ -147,9 +150,8 @@ export default class LoudThoughtsPlugin extends Plugin {
 
     menu.addItem((item) =>
       item.setTitle('Settings').onClick(() => {
-        // this.app.setting is not defined in types, but exists
-        // @ts-ignore
-        const setting = this.app.setting
+        // @ts-expect-error - this.app.setting is not in types but exists at runtime
+        const setting = this.app.setting as { open: () => void; openTabById: (id: string) => void }
         setting.open()
         setting.openTabById('audiopen-sync')
       })
@@ -168,18 +170,15 @@ export default class LoudThoughtsPlugin extends Plugin {
     icon.addClass(`loud-thoughts-mod-${this.syncStatus}`)
   }
 
-  forceBufferSync = async () => {
+  forceBufferSync = () => {
     const user = getAuth(this.firebase).currentUser
     if (!user) {
       return
     }
     const db = getDatabase(this.firebase)
-    try {
-      await goOffline(db)
-    } finally {
-      await goOnline(db)
-      new Notice('Reset LoudThoughts buffer connection')
-    }
+    goOffline(db)
+    goOnline(db)
+    new Notice('Reset LoudThoughts buffer connection')
   }
 
   onBufferChange = async (data: DataSnapshot) => {
@@ -195,7 +194,8 @@ export default class LoudThoughtsPlugin extends Plugin {
 
       const payloads: BufferItemData[] = []
       data.forEach((event) => {
-        const payload = event.val().data // Get the payload data
+        const eventData = event.val() as { data?: BufferItemData } | null
+        const payload = eventData?.data
         if (payload) {
           payloads.push(payload)
         }
@@ -208,25 +208,16 @@ export default class LoudThoughtsPlugin extends Plugin {
           index === self.findLastIndex((p) => p.id === payload.id)
       )
 
-      if (this.settings.debug)
-        console.log(`[LoudThoughts] Processing ${uniquePayloads.length} note(s)`)
-
       // Create or update notes, then delete form buffer
       let promiseChain = Promise.resolve()
       for (const payload of uniquePayloads) {
         promiseChain = promiseChain.then(async () => {
-          if (this.settings.debug)
-            console.log(`[LoudThoughts] Syncing: ${payload.platform}/${payload.title}`)
           await this.applyEvent(payload)
           await this.wipe(payload)
         })
       }
 
       await promiseChain
-      // TODO: Should this be the last? Or the last touched, which is the first?
-      promiseChain.catch((err) => {
-        this.handleError(err, 'Error loading voice notes')
-      })
       this.syncStatus = 'ok'
       this.updateStatusBarIcon() // All events processed, set color to gray
       new Notice('New voice notes loaded')
@@ -235,7 +226,6 @@ export default class LoudThoughtsPlugin extends Plugin {
       this.updateStatusBarIcon()
       this.handleError(err, 'Error loading voice notes')
       throw err
-    } finally {
     }
   }
 
@@ -245,7 +235,7 @@ export default class LoudThoughtsPlugin extends Plugin {
     await wipe(value)
   }
 
-  findFileByAudioPenID = async (id: string): Promise<TFile | null> => {
+  findFileByAudioPenID = (id: string): TFile | null => {
     const files = this.app.vault.getMarkdownFiles()
 
     for (const file of files) {
@@ -301,7 +291,7 @@ export default class LoudThoughtsPlugin extends Plugin {
 
 
     let newContent = await this.generateMarkdownContent({
-      content: content.replace(/\<br\/\>/g, '\n'), // voicenotes uses <br> instead of new line
+      content: content.replace(/<br\/>/g, '\n'), // voicenotes uses <br> instead of new line
       orig_transcript,
       title,
       tags,
@@ -314,9 +304,10 @@ export default class LoudThoughtsPlugin extends Plugin {
     const existingFiles = this.app.vault.getMarkdownFiles().filter((file) => {
       const frontmatter = this.app.metadataCache.getCache(
         file.path
-      )?.frontmatter
+      )?.frontmatter as { audioPenID?: string | number } | undefined
+      const audioPenID = frontmatter?.audioPenID
       return (
-        frontmatter && frontmatter.audioPenID?.toString() === id?.toString()
+        audioPenID !== undefined && String(audioPenID) === String(id)
       )
     })
 
@@ -326,8 +317,8 @@ export default class LoudThoughtsPlugin extends Plugin {
       let filePath = this.generateFilePath(title)
       try {
         await this.app.vault.create(filePath, newContent)
-      } catch (error) {
-        console.error('Error creating new note, adding date to filename', error)
+      } catch {
+        // File creation failed (likely duplicate name), add date to filename
         filePath = this.generateFilePath(
           `${title}-${moment(parsedDate).format('YYYY-MM-DD')}`
         )
@@ -398,11 +389,10 @@ export default class LoudThoughtsPlugin extends Plugin {
     // then fall back to daily note core plugin
     // then fall back to basic YYYY-MM-DD
 
-    // this.app.plugins is not defined in types, but exists
-    // @ts-ignore
-    const periodicNotesPlugin = this.app.plugins.getPlugin('periodic-notes')
-    // @ts-ignore
-    const dailyNotesPlugin = this.app.plugins.getPlugin('daily-notes')
+     
+    const periodicNotesPlugin = (this.app as unknown as { plugins: { getPlugin: (pluginId: string) => unknown } }).plugins.getPlugin('periodic-notes') as { settings?: { daily?: { format?: string } } } | null
+
+    const dailyNotesPlugin = (this.app as unknown as { plugins: { getPlugin: (pluginId: string) => unknown } }).plugins.getPlugin('daily-notes') as { settings?: { format?: string } } | null
 
     let dailyNoteFormat = 'YYYY-MM-DD'
 
@@ -483,10 +473,6 @@ export default class LoudThoughtsPlugin extends Plugin {
     const alfieMetadata = payload.metadata as AlfieMetadata
     const todos = alfieMetadata?.todos || []
 
-    if (this.settings.debug) {
-      console.log(`[LoudThoughts] Daily review: ${payload.title} (${todos.length} todos, mode: ${this.settings.alfieDailyReviewMode})`)
-    }
-
     if (this.settings.alfieDailyReviewMode === 'daily-note') {
       await this.appendToDailyNote(payload, todos)
     } else if (this.settings.alfieDailyReviewMode === 'voice-note') {
@@ -533,7 +519,7 @@ export default class LoudThoughtsPlugin extends Plugin {
         : timestamp
 
     let newContent = await this.generateMarkdownContent({
-      content: content.replace(/\<br\/\>/g, '\n'),
+      content: content.replace(/<br\/>/g, '\n'),
       orig_transcript,
       title,
       tags,
@@ -546,9 +532,10 @@ export default class LoudThoughtsPlugin extends Plugin {
     const existingFiles = this.app.vault.getMarkdownFiles().filter((file) => {
       const frontmatter = this.app.metadataCache.getCache(
         file.path
-      )?.frontmatter
+      )?.frontmatter as { audioPenID?: string | number } | undefined
+      const audioPenID = frontmatter?.audioPenID
       return (
-        frontmatter && frontmatter.audioPenID?.toString() === id?.toString()
+        audioPenID !== undefined && String(audioPenID) === String(id)
       )
     })
 
@@ -556,8 +543,8 @@ export default class LoudThoughtsPlugin extends Plugin {
       let filePath = this.generateFilePath(title)
       try {
         await this.app.vault.create(filePath, newContent)
-      } catch (error) {
-        console.error('Error creating new note, adding date to filename', error)
+      } catch {
+        // File creation failed (likely duplicate name), add date to filename
         filePath = this.generateFilePath(
           `${title}-${moment(parsedDate).format('YYYY-MM-DD')}`
         )
@@ -648,10 +635,6 @@ export default class LoudThoughtsPlugin extends Plugin {
       ? moment(alfieMetadata.reflectionDate, 'YYYY-MM-DD')
       : moment()
 
-    if (this.settings.debug && alfieMetadata?.reflectionDate) {
-      console.log(`[LoudThoughts] Using reflectionDate: ${alfieMetadata.reflectionDate}`)
-    }
-
     // Get or create the daily note for the target date using the daily notes interface
     // This respects Periodic Notes / Daily Notes plugin settings and templates
     let file = getDailyNote(targetDate, getAllDailyNotes())
@@ -660,16 +643,10 @@ export default class LoudThoughtsPlugin extends Plugin {
       // Daily note doesn't exist - create it using the plugin API (applies user's template)
       try {
         file = await createDailyNote(targetDate)
-        if (this.settings.debug) console.log(`[LoudThoughts] Created daily note: ${file.path}`)
       } catch (error) {
-        console.error('[LoudThoughts] Error creating daily note:', error)
-        new Notice(`Error creating daily note: ${error.message}`)
+        new Notice(`Error creating daily note: ${(error as Error).message}`)
         return
       }
-    }
-
-    if (this.settings.debug) {
-      console.log(`[LoudThoughts] Appending to: ${file.path}`)
     }
 
     // Daily note exists, append under heading or add heading
@@ -681,10 +658,10 @@ export default class LoudThoughtsPlugin extends Plugin {
       )
       const headingMatch = existingContent.match(headingRegex)
 
-      if (headingMatch) {
+      if (headingMatch && headingMatch.index !== undefined) {
         // Heading exists - find the heading level and insert before next same-or-higher level heading
         const headingLevel = headingMatch[1].length // Number of # characters
-        const headingIndex = headingMatch.index!
+        const headingIndex = headingMatch.index
         const afterHeading = existingContent.substring(headingIndex)
 
         // Find next heading of same or higher level (fewer or equal # characters)
@@ -720,7 +697,6 @@ export default class LoudThoughtsPlugin extends Plugin {
     const oneLiner = alfieMetadata?.oneLiner
     if (this.settings.alfieAddOneLinerAsAlias && oneLiner) {
       await this.addAliasToFrontmatter(file, oneLiner)
-      if (this.settings.debug) console.log(`[LoudThoughts] Added alias: "${oneLiner.substring(0, 50)}..."`)
     }
   }
 
@@ -728,15 +704,17 @@ export default class LoudThoughtsPlugin extends Plugin {
    * Add an alias to a file's frontmatter using Obsidian's API
    */
   addAliasToFrontmatter = async (file: TFile, alias: string) => {
-    await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+    await this.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
       if (!frontmatter.aliases) {
         frontmatter.aliases = []
       }
-      if (!Array.isArray(frontmatter.aliases)) {
+      const aliases = frontmatter.aliases as unknown[]
+      if (!Array.isArray(aliases)) {
         frontmatter.aliases = [frontmatter.aliases]
       }
-      if (!frontmatter.aliases.includes(alias)) {
-        frontmatter.aliases.push(alias)
+      const aliasArray = frontmatter.aliases as string[]
+      if (!aliasArray.includes(alias)) {
+        aliasArray.push(alias)
       }
     })
   }
@@ -745,10 +723,10 @@ export default class LoudThoughtsPlugin extends Plugin {
    * Get the path to today's daily note based on user's settings
    */
   getDailyNotePath = (): string => {
-    // @ts-ignore - plugins API not in types
-    const periodicNotesPlugin = this.app.plugins.getPlugin('periodic-notes')
-    // @ts-ignore
-    const dailyNotesPlugin = this.app.plugins.getPlugin('daily-notes')
+     
+    const periodicNotesPlugin = (this.app as unknown as { plugins: { getPlugin: (pluginId: string) => unknown } }).plugins.getPlugin('periodic-notes') as { settings?: { daily?: { format?: string; folder?: string } } } | null
+     
+    const dailyNotesPlugin = (this.app as unknown as { plugins: { getPlugin: (pluginId: string) => unknown } }).plugins.getPlugin('daily-notes') as { settings?: { format?: string; folder?: string } } | null
 
     let dailyNoteFormat = 'YYYY-MM-DD'
     let dailyNoteFolder = ''
@@ -788,9 +766,9 @@ export default class LoudThoughtsPlugin extends Plugin {
     }
   }
 
-  private handleError(error: Error, message: string) {
-    console.error(`${message}: ${error.message}`)
-    new Notice(`Error: ${message}`)
+  private handleError(error: unknown, message: string) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    new Notice(`Error: ${message} - ${errorMessage}`)
     this.syncStatus = 'error'
     this.updateStatusBarIcon()
   }
@@ -806,7 +784,8 @@ export default class LoudThoughtsPlugin extends Plugin {
   }
 
   async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData())
+    const data = await this.loadData() as Partial<LoudThoughtsSettings> | null
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, data)
   }
 
   async saveSettings() {

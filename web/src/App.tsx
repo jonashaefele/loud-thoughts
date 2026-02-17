@@ -12,16 +12,16 @@ import {
   signInWithPopup,
   signOut,
   User,
-} from '@firebase/auth'
+} from 'firebase/auth'
 import { BufferItem } from '@shared/types'
 
 const Login = () => {
   const [store, { setLoading }] = useContext(AppContext)
   const provider = new GoogleAuthProvider()
-  const loginWithGoogle = async (e: Event) => {
+  const loginWithGoogle = (e: Event) => {
     e.preventDefault()
     setLoading(true)
-    return signInWithPopup(getAuth(store.app), provider)
+    void signInWithPopup(getAuth(store.app), provider)
   }
   return (
     <form onSubmit={loginWithGoogle}>
@@ -64,7 +64,7 @@ const Authed = () => {
 
   const handleCopy: JSX.EventHandler<HTMLInputElement, FocusEvent> = (e) => {
     e.currentTarget.select()
-    navigator.clipboard.writeText(e.currentTarget.value)
+    void navigator.clipboard.writeText(e.currentTarget.value)
     showToastMessage('Copied to clipboard', e.currentTarget)
   }
 
@@ -103,9 +103,9 @@ const Authed = () => {
       try {
         setLoading(true)
         // clear everything
-        store.buffer?.map((v) => {
-          handleClearClick(v.id)
-        })
+        await Promise.all(
+          store.buffer?.map((v) => handleClearClick(v.id)) || []
+        )
       } finally {
         setLoading(false)
       }

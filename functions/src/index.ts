@@ -1,6 +1,5 @@
 // Import the required modules individually
 // Updated for Node.js 20 runtime
-import * as crypto from 'crypto'
 import { onRequest, onCall } from 'firebase-functions/v2/https'
 import { setGlobalOptions } from 'firebase-functions/v2'
 import * as functions from 'firebase-functions/v1' // v1 for legacy functions
@@ -90,10 +89,14 @@ export const webhook = onRequest({ cors: true }, async (request, response) => {
 export const newUser = functions
   .region('europe-west1')
   .auth.user()
-  .onCreate((user: admin.auth.UserRecord) => {
-    const key = crypto.randomBytes(24).toString('hex')
-    admin.database().ref(`/keys/${key}`).set(user.uid)
-    admin.database().ref(`/users/${user.uid}/key`).set(key)
+  .onCreate(async (user: admin.auth.UserRecord) => {
+    // crypto.randomUUID() is globally available in Node.js 18+ (Web Crypto API)
+    // It generates cryptographically secure UUID v4 values
+    const key = crypto.randomUUID()
+    await Promise.all([
+      admin.database().ref(`/keys/${key}`).set(user.uid),
+      admin.database().ref(`/users/${user.uid}/key`).set(key),
+    ])
   })
 
 interface WipeData {
