@@ -49,7 +49,13 @@ export abstract class BaseProvider implements Provider {
       }
     }
 
-    return String(result || defaultValue)
+    if (typeof result === 'string') {
+      return result || defaultValue
+    }
+    if (typeof result === 'number' || typeof result === 'boolean') {
+      return String(result)
+    }
+    return defaultValue
   }
 
   /**

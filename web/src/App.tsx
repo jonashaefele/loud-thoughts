@@ -72,7 +72,9 @@ const Authed = () => {
     setLoading(true)
     try {
       const { data } = await generateObsidianToken()
-      typeof data === 'string' && setObsidianToken(data)
+      if (typeof data === 'string') {
+        setObsidianToken(data)
+      }
     } finally {
       setLoading(false)
     }
@@ -122,7 +124,7 @@ const Authed = () => {
             {store.currentUser?.email})
           </p>
           <button
-            onClick={() => handleLogoutClick(getAuth(store.app))}
+            onClick={() => void handleLogoutClick(getAuth(store.app))}
             disabled={store.loading}
             class="md:w-auto button"
           >
@@ -140,7 +142,7 @@ const Authed = () => {
             </div>
             {!store.obsidianToken && (
               <button
-                onClick={handleGenerateClick}
+                onClick={() => void handleGenerateClick()}
                 disabled={store.loading}
                 class="md:w-auto button button-primary"
               >
@@ -205,7 +207,7 @@ const Authed = () => {
               </p>
             </div>
             <button
-              onClick={() => handleClearAll('all')}
+              onClick={() => void handleClearAll('all')}
               disabled={store.loading}
               title="Click if plugin is erroring"
               class="md:w-auto button flex-nowrap text-nowrap"
@@ -221,7 +223,7 @@ const Authed = () => {
                 <p>{v.data.content.substring(0, 300)} ...</p>
               </div>
               <button
-                onClick={() => handleClearClick(v.data.id)}
+                onClick={() => void handleClearClick(v.data.id)}
                 disabled={store.loading}
                 title="Click if plugin is erroring"
                 class="md:w-auto md:mr-5 button button-sm button-secondary"
